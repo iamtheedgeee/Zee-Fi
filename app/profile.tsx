@@ -1,28 +1,11 @@
-/**
- * Profile Screen
- *
- * Shows user profile information and app settings grouped
- * into sections. Matches the profile screen in the PDF.
- *
- * Sections:
- *  1. ScreenHeader (with back arrow label)
- *  2. Avatar, name, email, member since badge
- *  3. ACCOUNT MANAGEMENT group
- *  4. APP PREFERENCES group
- *  5. SUPPORT & LEGAL group
- *  6. Logout button
- *  7. Delete Account (destructive)
- *  8. ZeeFi AI footer note
- */
-
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    View,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
 } from 'react-native';
 
 import ScreenHeader from '@/components/common/ScreenHeader';
@@ -30,14 +13,14 @@ import ProfileMenuItem from '@/components/profile/ProfileMenuItem';
 import ProfileSectionHeader from '@/components/profile/ProfileSectionHeader';
 
 import {
-    COLORS,
-    FONT_SIZE,
-    FONT_WEIGHT,
-    RADIUS,
-    SHADOWS,
-    SPACING,
+  COLORS,
+  FONT_SIZE,
+  FONT_WEIGHT,
+  RADIUS,
+  SHADOWS,
+  SPACING,
 } from '@/constants';
-import { mockUser } from '@/data/mockUser';
+import { useUserStore } from '@/store';
 
 export default function ProfileScreen() {
   /**
@@ -46,23 +29,19 @@ export default function ProfileScreen() {
    * TODO: Persist this preference to AsyncStorage or SQLite.
    */
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-
+  const {user}=useUserStore()
   /**
    * Format the member since date into a readable string.
    * e.g. "2023-01-15" → "JAN 2023"
    */
   const memberSinceFormatted = new Date(
-    mockUser.memberSince
+    user!.createdAt
   ).toLocaleDateString('en-NG', {
     month: 'short',
     year: 'numeric',
   }).toUpperCase();
 
-  /**
-   * Get initials for the large avatar on this screen.
-   * e.g. "Alex Johnson" → "AJ"
-   */
-  const initials = mockUser.name
+  const initials = user?.name
     .split(' ')
     .map((n) => n[0])
     .join('');
@@ -90,8 +69,8 @@ export default function ProfileScreen() {
             <Text style={styles.avatarText}>{initials}</Text>
           </View>
 
-          <Text style={styles.userName}>{mockUser.name}</Text>
-          <Text style={styles.userEmail}>{mockUser.email}</Text>
+          <Text style={styles.userName}>{user?.name}</Text>
+          <Text style={styles.userEmail}>{user?.email}</Text>
 
           {/* Member since badge */}
           <View style={styles.memberBadge}>
@@ -115,7 +94,7 @@ export default function ProfileScreen() {
             }}
           />
 
-          <ProfileMenuItem
+          {/*<ProfileMenuItem
             iconName="shield-outline"
             iconBackground="#EDE9FE"
             iconColor="#7C3AED"
@@ -126,14 +105,6 @@ export default function ProfileScreen() {
           />
 
           <ProfileMenuItem
-            iconName="grid-outline"
-            iconBackground={COLORS.categoryGroceries}
-            iconColor={COLORS.categoryGroceriesIcon}
-            label="Manage Categories"
-            onPress={() => router.push("/categories")}
-          />
-
-          <ProfileMenuItem
             iconName="card-outline"
             iconBackground={COLORS.categoryEntertainment}
             iconColor={COLORS.categoryEntertainmentIcon}
@@ -141,7 +112,17 @@ export default function ProfileScreen() {
             onPress={() => {
               // TODO: Navigate to Payment Methods screen
             }}
+          />*/}
+
+          <ProfileMenuItem
+            iconName="grid-outline"
+            iconBackground={COLORS.categoryGroceries}
+            iconColor={COLORS.categoryGroceriesIcon}
+            label="Manage Categories"
+            onPress={() => router.push("/categories")}
           />
+
+          
         </View>
 
         {/* ── App Preferences Section ──────────────── */}

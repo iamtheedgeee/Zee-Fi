@@ -121,12 +121,12 @@ export default function TabLayout() {
 
       {/* ── Tab 4: Profile ─────────────────────── */}
       <Tabs.Screen
-        name="profile"
+        name="insights"
         options={{
-          title: 'Profile',
+          title: 'Insights',
           tabBarIcon: ({ color, focused }) => (
             <TabIcon
-              name={focused ? 'person' : 'person-outline'}
+              name={focused ? 'eye' : 'eye-outline'}
               color={color}
               focused={focused}
             />

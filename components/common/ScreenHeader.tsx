@@ -17,11 +17,13 @@
  *  - onNotificationPress: callback for bell icon tap
  *  - onAvatarPress: callback for avatar tap
  */
-
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '@/constants';
+import { useUserStore } from '@/store';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ScreenHeaderProps {
   title: string;
@@ -40,25 +42,37 @@ export default function ScreenHeader({
   showNotification = true,
   showAvatar = true,
   onNotificationPress,
-  onAvatarPress,
-  avatarInitials = 'AJ',
+  onAvatarPress=(()=>router.push('/profile')),
 }: ScreenHeaderProps) {
+  // Derive avatar initials
+  const {user}=useUserStore()
+  const avatarInitials = user?.name
+   .split(' ')
+   .map((n:string) => n[0])
+   .join('') ?? '?';
+   const insets = useSafeAreaInsets();
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + SPACING.sm }]}>
       {/* Left side: app logo mark and title/subtitle */}
+      <TouchableOpacity
+        onPress={()=>router.push('/(tabs)')}
+        activeOpacity={0.7}
+        >
       <View style={styles.leftSection}>
         {/* Small green logo mark — approximated from PDF */}
         <View style={styles.logoMark}>
           <Ionicons name="leaf" size={14} color={COLORS.textOnPrimary} />
         </View>
-
-        <View style={styles.titleBlock}>
-          <Text style={styles.title}>{title}</Text>
-          {subtitle ? (
-            <Text style={styles.subtitle}>{subtitle}</Text>
-          ) : null}
-        </View>
+        
+          <View style={styles.titleBlock}>
+            <Text style={styles.title}>{title}</Text>
+            {subtitle ? (
+              <Text style={styles.subtitle}>{subtitle}</Text>
+            ) : null}
+          </View>
+        
       </View>
+      </TouchableOpacity>
 
       {/* Right side: notification bell and avatar */}
       <View style={styles.rightSection}>

@@ -1,24 +1,5 @@
-/**
- * Utility functions for formatting values in the UI.
- *
- * Keeping formatting logic here rather than inline in
- * components means:
- *  1. Formatting is consistent across all screens
- *  2. Changes to format (e.g. currency symbol) only
- *     need to be made in one place
- *  3. Components stay clean and focused on rendering
- */
-
-/**
- * Formats a number as a Nigerian Naira currency string.
- *
- * Examples:
- *   formatCurrency(5400)    → "₦5,400.00"
- *   formatCurrency(142.2)   → "₦142.20"
- *   formatCurrency(12845.6) → "₦12,845.60"
- */
-export function formatCurrency(amount: number): string {
-  return `₦${amount.toLocaleString('en-NG', {
+export function formatCurrency(amount: number | string, currency:string|false="₦"): string {
+  return `${currency? currency: ''}${Number(amount).toLocaleString('en-NG', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
@@ -31,6 +12,7 @@ export function formatCurrency(amount: number): string {
  *   formatTime("2024-08-14T09:41:00") → "09:41 AM"
  */
 export function formatTime(isoString: string): string {
+  console.log(isoString)
   const date = new Date(isoString);
   return date.toLocaleTimeString('en-NG', {
     hour: '2-digit',
@@ -94,9 +76,12 @@ export function formatDateGroupHeader(isoString: string): string {
 export function groupTransactionsByDate<T extends { date: string }>(
   transactions: T[]
 ): { dateLabel: string; transactions: T[] }[] {
+  const sortedTransactions = [...transactions].sort(
+    (a, b) => b.date.localeCompare(a.date)
+  );
   const groups: Record<string, T[]> = {};
 
-  for (const transaction of transactions) {
+  for (const transaction of sortedTransactions) {
     const label = formatDateGroupHeader(transaction.date);
 
     if (!groups[label]) {

@@ -21,17 +21,17 @@
  *  - showDelete: whether to show the delete button (default false)
  */
 
-import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACING } from '@/constants';
-import { mockCategories } from '@/data/mockCategories';
-import { Transaction } from '@/types';
+import { CATEGORY_COLOR_OPTIONS, COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACING } from '@/constants';
+import { Transaction } from '@/database/services/transaction';
+import { useCategoryStore } from '@/store';
 import { formatCurrency, formatTime } from '@/utils/formatters';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface TransactionItemProps {
@@ -47,23 +47,18 @@ export default function TransactionItem({
   onDelete,
   showDelete = false,
 }: TransactionItemProps) {
-  /**
-   * Look up the full category object so we can get the
-   * icon name and colors. Falls back to a generic icon
-   * if the category is not found.
-   */
-  const category = mockCategories.find(
+  
+  const {categories}=useCategoryStore()
+  const category = categories.find(
     (c) => c.id === transaction.categoryId
   );
 
   const iconName = category?.iconName ?? 'ellipse-outline';
-  const iconBackground = category?.iconBackground ?? COLORS.inputBackground;
-  const iconColor = category?.iconColor ?? COLORS.textSecondary;
+  const CCO=CATEGORY_COLOR_OPTIONS.find((c)=>c.label===category?.iconColor)
+  const iconColor = CCO?.icon ??COLORS.textSecondary;
+  const iconBackground =CCO?.bg ?? COLORS.inputBackground;
 
-  /**
-   * Income amounts are shown in green with a + prefix.
-   * Expense amounts are shown in red with a - prefix.
-   */
+ 
   const isIncome = transaction.type === 'income';
   const amountColor = isIncome ? COLORS.income : COLORS.expense;
   const amountPrefix = isIncome ? '+' : '-';
@@ -82,10 +77,10 @@ export default function TransactionItem({
       {/* Middle: title and category + time */}
       <View style={styles.middleSection}>
         <Text style={styles.title} numberOfLines={1}>
-          {transaction.title}
+          {category?.name}
         </Text>
         <Text style={styles.meta}>
-          {transaction.categoryName} • {formatTime(transaction.date)}
+          {formatTime(transaction.date)}
         </Text>
       </View>
 

@@ -1,39 +1,20 @@
-/**
- * BudgetCategoryItem
- *
- * A single budget row on the My Budgets screen showing:
- *  - Category icon and name
- *  - Amount spent vs budget limit
- *  - A progress bar indicating how much of the budget is used
- *  - Days remaining in the budget period
- *  - A chevron to navigate to the budget detail
- *
- * The progress bar automatically changes color based on
- * how much of the budget has been consumed:
- *  - Under 75%: green (on track)
- *  - 75–90%: amber (approaching limit)
- *  - Over 90%: red (nearly exceeded)
- *
- * Props:
- *  - budget: the Budget object to display
- *  - onPress: called when the row is tapped
- */
-
 import ProgressBar from '@/components/common/ProgressBar';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants';
-import { Budget } from '@/types';
+import { CATEGORY_COLOR_OPTIONS, COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants';
+import { useCategoryStore } from '@/store';
+import { InStateBudget } from '@/store/budgetStore';
+import { getDaysRemaining } from '@/utils/date';
 import { formatCurrency } from '@/utils/formatters';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface BudgetCategoryItemProps {
-  budget: Budget;
+  budget: InStateBudget;
   onPress?: () => void;
 }
 
@@ -41,16 +22,20 @@ export default function BudgetCategoryItem({
   budget,
   onPress,
 }: BudgetCategoryItemProps) {
-  /**
-   * Calculate what percentage of the budget has been spent.
-   * Clamped to 100 so the bar never visually overflows.
-   */
+  const {categories}=useCategoryStore()
+  const category=categories.find((c) => c.id === budget.categoryId)
+  
+  const iconBackground=CATEGORY_COLOR_OPTIONS.find((C)=>C.label===category?.iconColor)?.bg
+  const iconColor=CATEGORY_COLOR_OPTIONS.find((C)=>C.label===category?.iconColor)?.icon
+  const iconName=category?.iconName
+  //Calculate the following values from transactions
+  const spent=budget.spent
+  const daysRemaining=getDaysRemaining(budget.endDate)
   const percentUsed = Math.min(
     100,
-    Math.round((budget.spent / budget.limit) * 100)
+    Math.round((spent / budget.amount) * 100)
   );
-
-  const remaining = budget.limit - budget.spent;
+  const remaining = Math.max(0, budget.amount - spent);
 
   return (
     <TouchableOpacity
@@ -64,27 +49,27 @@ export default function BudgetCategoryItem({
         <View
           style={[
             styles.iconCircle,
-            { backgroundColor: budget.iconBackground },
+            { backgroundColor: iconBackground },
           ]}
         >
           <Ionicons
-            name={budget.iconName as any}
+            name={iconName as any}
             size={20}
-            color={budget.iconColor}
+            color={iconColor}
           />
         </View>
 
         {/* Category name and spent amount */}
         <View style={styles.nameSection}>
-          <Text style={styles.categoryName}>{budget.categoryName}</Text>
+          <Text style={styles.categoryName}>{category?.name}</Text>
           <Text style={styles.spentText}>
-            {formatCurrency(budget.spent)} spent
+            {formatCurrency(spent)} spent
           </Text>
         </View>
 
         {/* Right side: budget limit and chevron */}
         <View style={styles.rightSection}>
-          <Text style={styles.limitText}>{formatCurrency(budget.limit)}</Text>
+          <Text style={styles.limitText}>{formatCurrency(budget.amount)}</Text>
           <Ionicons
             name="chevron-forward"
             size={16}
@@ -104,7 +89,7 @@ export default function BudgetCategoryItem({
           {formatCurrency(remaining)} remaining
         </Text>
         <Text style={styles.daysText}>
-          {budget.daysRemaining} days left
+          {daysRemaining} days left
         </Text>
       </View>
     </TouchableOpacity>

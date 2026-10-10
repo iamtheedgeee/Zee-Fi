@@ -17,6 +17,7 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function LoginScreen() {
+  console.log("Login screen loaded")
   return (
     <View style={styles.container}>
       {/* App logo area */}
@@ -38,7 +39,7 @@ export default function LoginScreen() {
        */}
       <TouchableOpacity
         style={styles.skipButton}
-        onPress={() => router.replace('/')}
+        onPress={() => router.replace('/(tabs)')}
         activeOpacity={0.85}
       >
         <Text style={styles.skipButtonText}>

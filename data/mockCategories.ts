@@ -8,6 +8,7 @@ import { Category } from '@/types';
  * iconName values correspond to Ionicons icon names from
  * @expo/vector-icons which is available in all Expo projects.
  */
+
 export const mockCategories: Category[] = [
   {
     id: 'cat-001',

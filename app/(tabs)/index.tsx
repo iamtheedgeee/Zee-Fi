@@ -18,15 +18,24 @@
  * The entire screen scrolls vertically. The FAB floats
  * above the ScrollView using absolute positioning.
  */
+/*
+// At the top of DashboardScreen, pull balance from store:
+const { user } = useUserStore();
+const { transactions } = useTransactionStore();
 
+// Then in the balance card JSX, replace the hardcoded amount:
+<Text style={styles.balanceAmount}>
+  {formatCurrency(user?.balance ?? 0)}
+</Text>
+*/
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    View
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
 } from 'react-native';
 
 import FloatingActionButton from '@/components/common/FloatingActionButton';
@@ -35,21 +44,20 @@ import ScreenHeader from '@/components/common/ScreenHeader';
 import SectionHeader from '@/components/common/SectionHeader';
 import StatCard from '@/components/common/StatCard';
 import TransactionItem from '@/components/transaction/TransactionItem';
-import AddTransactionModal from '@/modals/AddTransactionModal';
+import AddTransactionModal from '@/modals/AddTransactionModal3';
 
 import { mockOverallBudget } from '@/data/mockBudgets';
-import { mockMonthlySummary, mockSavingsGoal } from '@/data/mockInsights';
-import { mockTransactions } from '@/data/mockTransactions';
-import { mockUser } from '@/data/mockUser';
+import { mockSavingsGoal } from '@/data/mockInsights';
 
 import {
-    COLORS,
-    FONT_SIZE,
-    FONT_WEIGHT,
-    RADIUS,
-    SHADOWS,
-    SPACING,
+  COLORS,
+  FONT_SIZE,
+  FONT_WEIGHT,
+  RADIUS,
+  SHADOWS,
+  SPACING,
 } from '@/constants';
+import { useBudgetStore, useTransactionStore, useUserStore } from '@/store';
 import { formatCurrency } from '@/utils/formatters';
 
 export default function DashboardScreen() {
@@ -60,22 +68,30 @@ export default function DashboardScreen() {
    * Only show the 4 most recent transactions in the
    * dashboard preview. The full list is on the History tab.
    */
-  const recentTransactions = mockTransactions.slice(0, 4);
+ const { user,summary } = useUserStore();
+ const {budgets}=useBudgetStore();
+ 
+ // Pull real transactions from the store
+ const { transactions } = useTransactionStore();
+ 
+ // Derive the first name for the greeting
+ const firstName = user?.name.split(' ')[0] ?? 'there';
+ 
 
-  /**
-   * Extract the user's first name for the greeting.
-   * e.g. "Alex Johnson" → "Alex"
-   */
-  const firstName = mockUser.name.split(' ')[0];
+ 
+ // Recent transactions (first 4) — now from real store data
+ const recentTransactions = transactions.slice(0, 4);
 
-  /**
-   * Get the initials for the avatar circle.
-   * e.g. "Alex Johnson" → "AJ"
-   */
-  const initials = mockUser.name
-    .split(' ')
-    .map((n) => n[0])
-    .join('');
+ const totalBudget = budgets.reduce((sum, b) => sum + b.amount, 0);
+
+ const totalSpent = budgets.reduce(
+    (sum, b) => sum + ((b as any).spent ?? 0),
+    0
+  );
+  const overallPercent =
+    totalBudget > 0
+        ? Math.min(100, Math.round((totalSpent / totalBudget) * 100))
+        : 0;
 
   /**
    * Calculate the savings goal progress percentage.
@@ -95,11 +111,9 @@ export default function DashboardScreen() {
       <ScreenHeader
         title="ZeeFi AI"
         subtitle={`Hello, ${firstName} 👋`}
-        avatarInitials={initials}
         onNotificationPress={() => {
           // TODO: Navigate to notifications screen
         }}
-        onAvatarPress={() => router.push('/(tabs)/profile')}
       />
 
       {/* ── Scrollable Content ───────────────────── */}
@@ -112,14 +126,9 @@ export default function DashboardScreen() {
         <View style={styles.balanceCard}>
           <Text style={styles.balanceLabel}>Total Balance</Text>
           <Text style={styles.balanceAmount}>
-            {formatCurrency(12845.60)}
+            {formatCurrency(user!.balance)}
           </Text>
 
-          {/*
-           * Small trend indicator showing balance change
-           * compared to last month. Hardcoded mock for now.
-           * TODO: Calculate real trend from transaction history.
-           */}
           <View style={styles.balanceTrendRow}>
             <Ionicons
               name="trending-up"
@@ -142,43 +151,41 @@ export default function DashboardScreen() {
         <View style={styles.statsGrid}>
           <StatCard
             label="Monthly Income"
-            value={formatCurrency(mockMonthlySummary.totalIncome)}
+            value={formatCurrency(summary?.periodIncome!)}
             trend="+8%"
             trendPositive
           />
           <StatCard
             label="Monthly Expense"
-            value={formatCurrency(mockMonthlySummary.totalSpent)}
+            value={formatCurrency(summary?.periodExpense!)}
             trend="-3%"
             trendPositive={false}
           />
-          <StatCard
-            label="Daily Budget"
-            value={formatCurrency(120.00)}
-            trend={undefined}
-          />
-          <StatCard
+          
+          {/*<StatCard
             label="Monthly Savings"
             value={formatCurrency(mockMonthlySummary.netSavings)}
             trend="+12%"
             trendPositive
-          />
+          />*/}
         </View>
 
-        {/* ── Budget Progress Card ─────────────────── */}
+        {/* ── Budget Progress Card ─────────────────── *
+            SUMS UP ALL THE BUDGETS AND GETS THE COMBINED PROGRESS CLICK TO GO TO BUDGET PAGE
+        */}
         <View style={styles.card}>
           <View style={styles.budgetCardHeader}>
             <View>
               <Text style={styles.cardLabel}>Budget Progress</Text>
               <Text style={styles.budgetAmount}>
-                {formatCurrency(mockOverallBudget.totalSpent)}
+                {formatCurrency(totalSpent)}
               </Text>
               <Text style={styles.budgetLimit}>
-                Monthly Limit: {formatCurrency(mockOverallBudget.totalBudget)}
+                Monthly Limit: {formatCurrency(totalBudget)}
               </Text>
             </View>
             <Text style={styles.budgetPercent}>
-              {mockOverallBudget.percentUsed}%
+              {overallPercent}%
             </Text>
           </View>
 
@@ -231,58 +238,13 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* ── Savings Goal Card ────────────────────── */}
-        <View style={styles.card}>
-          <View style={styles.goalHeader}>
-            {/* Goal icon */}
-            <View style={styles.goalIconCircle}>
-              <Ionicons
-                name="airplane-outline"
-                size={20}
-                color={COLORS.primary}
-              />
-            </View>
-
-            <View style={styles.goalInfo}>
-              <Text style={styles.goalTitle}>
-                {mockSavingsGoal.title}
-              </Text>
-              <Text style={styles.goalSubtitle}>
-                {goalPercent}% Complete
-              </Text>
-            </View>
-
-            <Text style={styles.goalPercent}>{goalPercent}%</Text>
-          </View>
-
-          <ProgressBar
-            percent={goalPercent}
-            height={8}
-            overrideColor={COLORS.primary}
-          />
-
-          <View style={styles.goalFooter}>
-            <Text style={styles.goalAmounts}>
-              {formatCurrency(mockSavingsGoal.currentAmount)} of{' '}
-              {formatCurrency(mockSavingsGoal.targetAmount)}
-            </Text>
-            <Text style={styles.goalMonths}>
-              {mockSavingsGoal.monthsRemaining} months to go
-            </Text>
-          </View>
-
-          <Text style={styles.goalContribution}>
-            Monthly Contribution:{' '}
-            {formatCurrency(mockSavingsGoal.monthlyContribution)}
-          </Text>
-        </View>
-
+        
         {/* ── Recent Transactions ──────────────────── */}
         <View style={styles.card}>
           <SectionHeader
             title="Recent Transactions"
             actionLabel="View All"
-            onActionPress={() => router.push('/(tabs)/history')}
+            onActionPress={() => router.push('/history')}
           />
 
           {/*
@@ -316,16 +278,16 @@ export default function DashboardScreen() {
         <View style={styles.bottomPadding} />
       </ScrollView>
 
-      {/* ── Floating Action Button ───────────────── */}
+      {/* ── Floating Action Button ─────────────────*/}
       <FloatingActionButton onPress={() => setModalVisible(true)} />
 
       {/* ── Add Transaction Modal ────────────────── */}
       <AddTransactionModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        onSave={(data) => {
-          // TODO: Save transaction to SQLite in a later phase
-          console.log('New transaction:', data);
+        onSaved={() => {
+          setModalVisible(false)
+          console.log('Successfully added new transaction');
         }}
       />
     </View>
@@ -390,6 +352,7 @@ const styles = StyleSheet.create({
 
   // ── Stats Grid ──────────────────────────────────
   statsGrid: {
+    width:'100%',
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: SPACING.md,

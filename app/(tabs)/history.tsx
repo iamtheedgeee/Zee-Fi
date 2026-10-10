@@ -1,32 +1,11 @@
-/**
- * Transaction History Screen
- *
- * Shows the complete list of all transactions grouped
- * by date with search and filter functionality.
- *
- * Sections:
- *  1. ScreenHeader
- *  2. Page title and subtitle
- *  3. Search bar with filter button
- *  4. All / Income / Expense filter tabs
- *  5. Grouped transaction list
- *  6. FloatingActionButton — add new transaction
- *
- * Transactions are grouped by date into sections
- * (Today, Yesterday, August 11 2024, etc.) using
- * the groupTransactionsByDate utility function.
- *
- * The search filters transactions by title in real time
- * as the user types. The type filter (All/Income/Expense)
- * further narrows the results.
- */
-
+import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 import FilterTabs from '@/components/common/FilterTabs';
@@ -34,69 +13,101 @@ import FloatingActionButton from '@/components/common/FloatingActionButton';
 import ScreenHeader from '@/components/common/ScreenHeader';
 import SearchBar from '@/components/common/SearchBar';
 import TransactionItem from '@/components/transaction/TransactionItem';
-import AddTransactionModal from '@/modals/AddTransactionModal';
-
 import {
-    COLORS,
-    FONT_SIZE,
-    FONT_WEIGHT,
-    RADIUS,
-    SHADOWS,
-    SPACING,
+  COLORS,
+  FONT_SIZE,
+  FONT_WEIGHT,
+  RADIUS,
+  SHADOWS,
+  SPACING,
 } from '@/constants';
-import { mockTransactions } from '@/data/mockTransactions';
+import AddTransactionModal from '@/modals/AddTransactionModal3';
+import DateFilterModal, {
+  DateFilter,
+  buildPresetFilter,
+} from '@/modals/DateFilterModal';
+import { useCategoryStore, useTransactionStore } from '@/store';
 import {
-    formatCurrency,
-    groupTransactionsByDate,
+  formatCurrency,
+  groupTransactionsByDate,
 } from '@/utils/formatters';
 
-/** The three filter tab options */
 const FILTER_TABS = ['All', 'Income', 'Expenses'];
 
 export default function HistoryScreen() {
   const [modalVisible, setModalVisible] = useState(false);
+  const [dateFilterVisible, setDateFilterVisible] = useState(false);
 
-  /** Current search query string */
+  const { transactions } = useTransactionStore();
+  const { categories } = useCategoryStore();
+
   const [searchQuery, setSearchQuery] = useState('');
-
-  /** Currently active filter tab */
   const [activeFilter, setActiveFilter] = useState('All');
 
   /**
-   * Filter and group transactions based on the current
-   * search query and active type filter.
-   *
-   * useMemo recalculates only when the query or filter
-   * changes, not on every render, which keeps the list
-   * smooth while typing.
+   * Date filter state.
+   * Starts as "All Time" so no transactions are hidden by default.
+   * Replaced entirely when the user applies a new filter from
+   * the DateFilterModal.
    */
-  const groupedTransactions = useMemo(() => {
-    let filtered = mockTransactions;
+  const [dateFilter, setDateFilter] = useState<DateFilter>(
+    () => buildPresetFilter('all')
+  );
 
-    // Apply type filter
+  /**
+   * Whether a non-default date filter is active.
+   * Used to visually highlight the filter button and
+   * show the active filter label below the search bar.
+   */
+  const isDateFiltered = dateFilter.preset !== 'all';
+
+  // ── Filtering ───────────────────────────────────────────
+  const groupedTransactions = useMemo(() => {
+    let filtered = transactions;
+
+    // 1. Type filter (All / Income / Expenses)
     if (activeFilter === 'Income') {
       filtered = filtered.filter((t) => t.type === 'income');
     } else if (activeFilter === 'Expenses') {
       filtered = filtered.filter((t) => t.type === 'expense');
     }
 
-    // Apply search filter (case-insensitive title match)
+    // 2. Search filter (by category name)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((t) =>
+        categories
+          .find((c) => c.id === t.categoryId)
+          ?.name.toLowerCase()
+          .includes(query)
+      );
+    }
+
+    // 3. Date filter
+    /**
+     * Both the transaction date and the filter bounds are
+     * ISO date strings (YYYY-MM-DD), so string comparison
+     * works correctly for date ordering.
+     */
+    if (isDateFiltered) {
       filtered = filtered.filter(
         (t) =>
-          t.title.toLowerCase().includes(query) ||
-          t.categoryName.toLowerCase().includes(query)
+          t.date >= dateFilter.startDate &&
+          t.date <= dateFilter.endDate
       );
     }
 
     return groupTransactionsByDate(filtered);
-  }, [searchQuery, activeFilter]);
+  }, [
+    searchQuery,
+    activeFilter,
+    transactions,
+    dateFilter,
+    isDateFiltered,
+    categories,
+  ]);
 
-  /**
-   * Calculate totals for the filtered transactions
-   * to show at the top of the screen.
-   */
+  // ── Totals ──────────────────────────────────────────────
   const filteredTransactions = groupedTransactions.flatMap(
     (g) => g.transactions
   );
@@ -109,22 +120,18 @@ export default function HistoryScreen() {
     .filter((t) => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
 
+  // ── Render ───────────────────────────────────────────────
   return (
     <View style={styles.screen}>
-      {/* ── Header ──────────────────────────────── */}
-      <ScreenHeader
-        title="ZeeFi AI"
-        subtitle="Transaction History"
-      />
+      <ScreenHeader title="ZeeFi AI" subtitle="Transaction History" />
 
-      {/* ── Scrollable Content ───────────────────── */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* ── Page Title ──────────────────────────── */}
+        {/* ── Page title ──────────────────────────── */}
         <View style={styles.pageTitleSection}>
           <Text style={styles.pageTitle}>Transaction History</Text>
           <Text style={styles.pageSubtitle}>
@@ -132,11 +139,7 @@ export default function HistoryScreen() {
           </Text>
         </View>
 
-        {/* ── Summary Row ─────────────────────────── */}
-        {/*
-         * Quick income and expense totals for the
-         * currently filtered view.
-         */}
+        {/* ── Summary row ─────────────────────────── */}
         <View style={styles.summaryRow}>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryLabel}>SPENT THIS MTH</Text>
@@ -153,40 +156,113 @@ export default function HistoryScreen() {
           </View>
         </View>
 
-        {/* ── Search Bar ──────────────────────────── */}
-        <SearchBar
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder="Search transactions..."
-          showFilter
-          onFilterPress={() => {
-            // TODO: Open filter modal with date range,
-            // amount range, and category filters
-          }}
-        />
+        {/* ── Search + filter button row ───────────── */}
+        {/**
+         * The SearchBar already has a showFilter prop but we
+         * want the filter button to be visually distinct when
+         * a date filter is active, so we render the filter
+         * button separately beside the search bar.
+         */}
+        <View style={styles.searchRow}>
+          <View style={styles.searchBarWrapper}>
+            <SearchBar
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search transactions..."
+            />
+          </View>
 
-        {/* ── Filter Tabs ─────────────────────────── */}
+          {/**
+           * The filter button glows green when a date filter
+           * is active so the user knows something is applied.
+           */}
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              isDateFiltered && styles.filterButtonActive,
+            ]}
+            onPress={() => setDateFilterVisible(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="options-outline"
+              size={20}
+              color={isDateFiltered ? COLORS.textOnPrimary : COLORS.textSecondary}
+            />
+            {/**
+             * Badge dot shown when a date filter is active.
+             * Small visual indicator that something is applied
+             * even when the button is just glanced at.
+             */}
+            {isDateFiltered && <View style={styles.filterBadge} />}
+          </TouchableOpacity>
+        </View>
+
+        {/* ── Active date filter pill ──────────────── */}
+        {/**
+         * When a date filter is active, show a dismissible
+         * pill below the search row so the user always knows
+         * their results are being narrowed by date.
+         */}
+        {isDateFiltered && (
+          <View style={styles.activeDatePill}>
+            <Ionicons
+              name="calendar-outline"
+              size={14}
+              color={COLORS.primary}
+            />
+            <Text style={styles.activeDatePillText}>
+              {dateFilter.label}
+            </Text>
+            <TouchableOpacity
+              onPress={() => setDateFilter(buildPresetFilter('all'))}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
+              <Ionicons
+                name="close-circle"
+                size={16}
+                color={COLORS.primary}
+              />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* ── Type filter tabs ─────────────────────── */}
         <FilterTabs
           tabs={FILTER_TABS}
           activeTab={activeFilter}
           onTabPress={setActiveFilter}
         />
 
-        {/* ── Grouped Transaction List ─────────────── */}
+        {/* ── Empty state ──────────────────────────── */}
         {groupedTransactions.length === 0 ? (
-          /*
-           * Empty state when no transactions match the
-           * current search query or filter.
-           */
           <View style={styles.emptyState}>
+            <Ionicons
+              name="receipt-outline"
+              size={40}
+              color={COLORS.textMuted}
+            />
             <Text style={styles.emptyStateText}>
-              No transactions found.
+              {isDateFiltered || searchQuery || activeFilter !== 'All'
+                ? 'No transactions match your filters.'
+                : 'No transactions yet.'}
             </Text>
+            {(isDateFiltered || searchQuery || activeFilter !== 'All') && (
+              <TouchableOpacity
+                onPress={() => {
+                  setSearchQuery('');
+                  setActiveFilter('All');
+                  setDateFilter(buildPresetFilter('all'));
+                }}
+                style={styles.clearAllButton}
+              >
+                <Text style={styles.clearAllButtonText}>Clear all filters</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : (
           groupedTransactions.map((group) => (
             <View key={group.dateLabel} style={styles.dateGroup}>
-              {/* Date group header */}
               <View style={styles.dateGroupHeader}>
                 <Text style={styles.dateGroupLabel}>
                   {group.dateLabel}
@@ -197,7 +273,6 @@ export default function HistoryScreen() {
                 </Text>
               </View>
 
-              {/* Transactions card for this date group */}
               <View style={styles.transactionsCard}>
                 {group.transactions.map((transaction, index) => (
                   <View
@@ -209,12 +284,9 @@ export default function HistoryScreen() {
                   >
                     <TransactionItem
                       transaction={transaction}
-                      onPress={() => {
-                        // TODO: Navigate to transaction detail
-                      }}
+                      onPress={() => {}}
                       showDelete
                       onDelete={() => {
-                        // TODO: Delete transaction from SQLite
                         console.log('TODO: Delete', transaction.id);
                       }}
                     />
@@ -228,16 +300,18 @@ export default function HistoryScreen() {
         <View style={styles.bottomPadding} />
       </ScrollView>
 
-      {/* ── Floating Action Button ───────────────── */}
       <FloatingActionButton onPress={() => setModalVisible(true)} />
 
-      {/* ── Add Transaction Modal ────────────────── */}
       <AddTransactionModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        onSave={(data) => {
-          console.log('TODO: Save transaction:', data);
-        }}
+      />
+
+      <DateFilterModal
+        visible={dateFilterVisible}
+        onClose={() => setDateFilterVisible(false)}
+        onApply={setDateFilter}
+        currentFilter={dateFilter}
       />
     </View>
   );
@@ -249,19 +323,14 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
 
-  scrollView: {
-    flex: 1,
-  },
+  scrollView: { flex: 1 },
 
   scrollContent: {
     padding: SPACING.lg,
     gap: SPACING.md,
   },
 
-  // ── Page Title ──────────────────────────────────
-  pageTitleSection: {
-    gap: SPACING.xs,
-  },
+  pageTitleSection: { gap: SPACING.xs },
 
   pageTitle: {
     fontSize: FONT_SIZE['2xl'],
@@ -274,7 +343,6 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
 
-  // ── Summary Row ─────────────────────────────────
   summaryRow: {
     flexDirection: 'row',
     backgroundColor: COLORS.surface,
@@ -307,10 +375,77 @@ const styles = StyleSheet.create({
     fontWeight: FONT_WEIGHT.bold,
   },
 
-  // ── Date Groups ─────────────────────────────────
-  dateGroup: {
+  // ── Search + filter row ──────────────────────────────
+  /**
+   * Row containing the search bar and filter button.
+   * The search bar gets flex: 1 so it fills available
+   * space while the filter button stays fixed width.
+   */
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: SPACING.sm,
   },
+
+  searchBarWrapper: {
+    flex: 1,
+  },
+
+  filterButton: {
+    width: 44,
+    height: 44,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    ...SHADOWS.sm,
+  },
+
+  filterButtonActive: {
+    backgroundColor: COLORS.primary,
+  },
+
+  /** Small dot overlaid on the filter button when active */
+  filterBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.warning,
+    borderWidth: 1.5,
+    borderColor: COLORS.surface,
+  },
+
+  // ── Active date filter pill ──────────────────────────
+  /**
+   * Compact pill shown below the search row when a date
+   * filter is active. Has a close button to dismiss quickly
+   * without opening the modal again.
+   */
+  activeDatePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.primaryMuted,
+    borderRadius: RADIUS.full,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.primaryLight,
+  },
+
+  activeDatePillText: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.medium,
+    color: COLORS.primary,
+  },
+
+  // ── Date groups ──────────────────────────────────────
+  dateGroup: { gap: SPACING.sm },
 
   dateGroupHeader: {
     flexDirection: 'row',
@@ -332,10 +467,6 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
   },
 
-  /**
-   * Each date group's transactions are wrapped in a
-   * white card so they visually group together.
-   */
   transactionsCard: {
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.lg,
@@ -348,18 +479,33 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
   },
 
-  // ── Empty State ─────────────────────────────────
+  // ── Empty state ──────────────────────────────────────
   emptyState: {
     padding: SPACING['4xl'],
     alignItems: 'center',
+    gap: SPACING.md,
   },
 
   emptyStateText: {
     fontSize: FONT_SIZE.md,
     color: COLORS.textMuted,
+    textAlign: 'center',
   },
 
-  bottomPadding: {
-    height: 80,
+  clearAllButton: {
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.primaryMuted,
+    borderWidth: 1,
+    borderColor: COLORS.primaryLight,
   },
+
+  clearAllButtonText: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.semiBold,
+    color: COLORS.primary,
+  },
+
+  bottomPadding: { height: 80 },
 });

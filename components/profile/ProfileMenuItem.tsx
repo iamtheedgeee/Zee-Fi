@@ -27,10 +27,10 @@ import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING } from '@/constants';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface ProfileMenuItemProps {

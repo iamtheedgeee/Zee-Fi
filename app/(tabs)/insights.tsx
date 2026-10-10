@@ -28,11 +28,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 import FloatingActionButton from '@/components/common/FloatingActionButton';
@@ -40,22 +40,23 @@ import ProgressBar from '@/components/common/ProgressBar';
 import SectionHeader from '@/components/common/SectionHeader';
 import ChartPlaceholder from '@/components/insights/ChartPlaceholder';
 import InsightCard from '@/components/insights/InsightCard';
-import AddTransactionModal from '@/modals/AddTransactionModal';
+import AddTransactionModal from '@/modals/AddTransactionModal3';
 
 import {
-    mockBarChartData,
-    mockDonutData,
-    mockInsights,
-    mockMonthlySummary
+  mockBarChartData,
+  mockDonutData,
+  mockInsights,
+  mockMonthlySummary
 } from '@/data/mockInsights';
 
+import ScreenHeader from '@/components/common/ScreenHeader';
 import {
-    COLORS,
-    FONT_SIZE,
-    FONT_WEIGHT,
-    RADIUS,
-    SHADOWS,
-    SPACING,
+  COLORS,
+  FONT_SIZE,
+  FONT_WEIGHT,
+  RADIUS,
+  SHADOWS,
+  SPACING,
 } from '@/constants';
 import { formatCurrency } from '@/utils/formatters';
 
@@ -64,6 +65,10 @@ export default function InsightsScreen() {
 
   return (
     <View style={styles.screen}>
+      <ScreenHeader
+        title="ZeeFi AI"
+        subtitle="Financial Insights"
+      />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}

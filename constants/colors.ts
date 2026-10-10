@@ -1,15 +1,32 @@
-/**
- * Central color palette for ZeeFi.
- *
- * Every color used in the application should come from here.
- * Never hardcode a color hex value directly inside a component
- * or StyleSheet — always reference a token from this file.
- *
- * Colors were extracted from the Visily PDF wireframes.
- * Where exact values could not be read, sensible approximations
- * are used and marked with an APPROX comment.
- */
-
+export const CATEGORY_COLOR_OPTIONS: { bg: string; icon: string; label: string }[] = [
+  { bg: '#FFE4E4', icon: '#FF6B6B', label: 'Red' },
+  { bg: '#E4F7F6', icon: '#4ECDC4', label: 'Teal' },
+  { bg: '#E4F4FF', icon: '#45B7D1', label: 'Blue' },
+  { bg: '#E8F5E9', icon: '#66BB6A', label: 'Green' },
+  { bg: '#FFFDE7', icon: '#FFC107', label: 'Yellow' },
+  { bg: '#F3E5F5', icon: '#AB47BC', label: 'Purple' },
+  { bg: '#FFF3E0', icon: '#FF9800', label: 'Orange' },
+  { bg: '#E8EAF6', icon: '#5C6BC0', label: 'Indigo' },
+  { bg: '#FBE9E7', icon: '#8D6E63', label: 'Brown' },
+  { bg: '#D8F3DC', icon: '#2D6A4F', label: 'Forest' },
+];
+export const CATEGORY_ICON_OPTIONS: { name: string; label: string }[] = [
+  { name: 'cart-outline',          label: 'Shopping' },
+  { name: 'restaurant-outline',    label: 'Food' },
+  { name: 'car-outline',           label: 'Transport' },
+  { name: 'home-outline',          label: 'Home' },
+  { name: 'fitness-outline',       label: 'Health' },
+  { name: 'game-controller-outline', label: 'Gaming' },
+  { name: 'book-outline',          label: 'Education' },
+  { name: 'flash-outline',         label: 'Utilities' },
+  { name: 'airplane-outline',      label: 'Travel' },
+  { name: 'cash-outline',          label: 'Money' },
+  { name: 'laptop-outline',        label: 'Work' },
+  { name: 'gift-outline',          label: 'Gifts' },
+  { name: 'cafe-outline',          label: 'Coffee' },
+  { name: 'musical-notes-outline', label: 'Music' },
+  { name: 'star-outline',          label: 'Other' },
+];
 export const COLORS = {
 
   // ── Backgrounds ──────────────────────────────

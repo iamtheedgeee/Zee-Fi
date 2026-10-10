@@ -1,0 +1,116 @@
+
+import type { SQLiteDatabase } from 'expo-sqlite';
+export type User = {
+  id: number;
+  name: string;
+  email: string | null;
+  currency: string;
+  balance: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export async function createUser(
+  db: SQLiteDatabase,
+  name: string,
+  email: string,
+  balance: number,
+  currency: string = 'NGN'
+): Promise<User> {
+  console.log(name,email,currency)
+  const result = await db.runAsync(
+    `INSERT INTO users (name, email, currency, balance) VALUES (?, ?, ?, ?)`,
+    name,
+    email,
+    currency,
+    balance,
+  );
+  const user = await db.getFirstAsync<User>(
+    `SELECT * FROM users WHERE id = ?;`,
+    result.lastInsertRowId
+  );
+
+  if (!user) throw new Error('Failed to retrieve the newly created user.');
+  return user;
+}
+
+export async function getUser(
+  db: SQLiteDatabase,
+  id: number
+): Promise<User | null> {
+  return db.getFirstAsync<User>(
+    `SELECT * FROM users WHERE id = ?;`,
+    id
+  );
+}
+
+export async function getFirstUser(
+  db: SQLiteDatabase
+): Promise<User | null> {
+  return db.getFirstAsync<User>(`SELECT * FROM users LIMIT 1;`);
+}
+
+/*export async function updateUser(
+  db: SQLiteDatabase,
+  id: number,
+  input: Partial<Pick<User, 'name' | 'email' | 'currency'>>
+): Promise<User> {
+  const fields = Object.keys(input) as (keyof typeof input)[];
+  if (fields.length === 0) throw new Error('No fields to update.');
+
+  const setClauses = fields.map((f) => `${f} = ?`).join(', ');
+  const values = fields.map((f) => input[f]);
+
+  await db.runAsync(
+    `UPDATE users SET ${setClauses}, updatedAt = CURRENT_TIMESTAMP WHERE id = ?;`,
+    ...values,
+    id
+  );
+  
+
+const user = await db.getFirstAsync<User>(
+    `SELECT * FROM users WHERE id = ?;`,
+    id
+  );
+  if (!user) throw new Error(`User with id ${id} not found after update.`);
+  return user;
+}
+*/
+
+/**
+ * Adjusts the user's balance by a signed delta.
+ * Pass a positive number to add (income).
+ * Pass a negative number to subtract (expense).
+ *
+ * Using a delta rather than setting an absolute value
+ * prevents race conditions and makes reversal easy:
+ * to undo an income of 500, pass delta = -500.
+ */
+export async function adjustUserBalance(
+  db: SQLiteDatabase,
+  userId: number,
+  delta: number
+): Promise<User> {
+  await db.runAsync(
+    `UPDATE users
+     SET balance = balance + ?,
+         updatedAt = CURRENT_TIMESTAMP
+     WHERE id = ?;`,
+    delta,
+    userId
+  );
+
+  const user = await db.getFirstAsync<User>(
+    `SELECT * FROM users WHERE id = ?;`,
+    userId
+  );
+  if (!user) throw new Error(`User with id ${userId} not found after balance update.`);
+  return user;
+}
+
+export async function deleteUser(
+  db: SQLiteDatabase,
+  id: number
+): Promise<void> {
+  await db.runAsync(`DELETE FROM users WHERE id = ?;`, id);
+}
