@@ -17,7 +17,6 @@ import {
   useUserStore,
 } from '@/store';
 import { TransactionType } from '@/types';
-import { getCurrentMonthRange } from '@/utils/date';
 import { Ionicons } from '@expo/vector-icons';
 import { useSQLiteContext } from 'expo-sqlite';
 import React, { useEffect, useState } from 'react';
@@ -193,8 +192,6 @@ function formatAmountInput(value: string): string {
       });
       addTransaction(transaction);
       setBalance(newBalance);
-      const { startDate, endDate } = getCurrentMonthRange();
-      setSummary(db,{startDate,endDate})
       refreshBudgetForCategory(transaction.categoryId)
       resetForm();
       onClose();

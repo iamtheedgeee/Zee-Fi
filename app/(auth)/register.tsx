@@ -162,7 +162,7 @@ export default function RegisterScreen() {
       await seedDefaultCategories(db, user.id);
       setUser(user);
       const { startDate, endDate } = getCurrentMonthRange();
-      await setSummary(db,{startDate,endDate})
+      await setSummary(db)
 
       router.replace('/(tabs)');
 

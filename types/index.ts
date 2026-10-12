@@ -97,7 +97,7 @@ export interface Budget {
  * Severity level of an insight card.
  * Controls the accent color and icon shown on the card.
  */
-export type InsightSeverity = 'info' | 'warning' | 'success' | 'tip';
+export type InsightSeverity = 'info' | 'warning' | 'success' | 'tip' | 'danger';
 
 export interface Insight {
   id: string;
@@ -170,3 +170,5 @@ export interface DonutSlice {
   percentage: number;
   color: string;
 }
+
+export type DashboardPeriod = 'weekly' | 'monthly' | 'yearly';

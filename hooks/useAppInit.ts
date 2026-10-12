@@ -19,7 +19,6 @@
 
 import { getFirstUser } from '@/database/services/user';
 import { useBudgetStore, useCategoryStore, useTransactionStore, useUserStore } from '@/store';
-import { getCurrentMonthRange } from '@/utils/date';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect } from 'react';
 
@@ -43,8 +42,7 @@ export function useAppInit() {
             setBudgets(db,user.id),
           ]);
           setUser(user)
-          const { startDate, endDate } = getCurrentMonthRange();
-          await setSummary(db,{startDate,endDate})
+          await setSummary(db)
           
         }
 

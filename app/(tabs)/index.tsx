@@ -1,43 +1,3 @@
-/**
- * Dashboard Screen
- *
- * The main home screen of ZeeFi. This is the first screen
- * users see after logging in and serves as the central hub
- * of the application.
- *
- * Sections (top to bottom):
- *  1. ScreenHeader — app logo, greeting, notification, avatar
- *  2. Total Balance Card — large green card showing net balance
- *  3. Stats Row — 2x2 grid of income, expense, savings, budget
- *  4. Budget Progress Card — overall monthly budget status
- *  5. Spending Breakdown — pie chart placeholder with legend
- *  6. Savings Goal Card — Japan Trip progress
- *  7. Recent Transactions — last 4 transactions with View All
- *  8. FloatingActionButton — opens Add Transaction modal
- *
- * The entire screen scrolls vertically. The FAB floats
- * above the ScrollView using absolute positioning.
- */
-/*
-// At the top of DashboardScreen, pull balance from store:
-const { user } = useUserStore();
-const { transactions } = useTransactionStore();
-
-// Then in the balance card JSX, replace the hardcoded amount:
-<Text style={styles.balanceAmount}>
-  {formatCurrency(user?.balance ?? 0)}
-</Text>
-*/
-import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import React, { useState } from 'react';
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  View
-} from 'react-native';
-
 import FloatingActionButton from '@/components/common/FloatingActionButton';
 import ProgressBar from '@/components/common/ProgressBar';
 import ScreenHeader from '@/components/common/ScreenHeader';
@@ -45,11 +5,20 @@ import SectionHeader from '@/components/common/SectionHeader';
 import StatCard from '@/components/common/StatCard';
 import TransactionItem from '@/components/transaction/TransactionItem';
 import AddTransactionModal from '@/modals/AddTransactionModal3';
+import { router } from 'expo-router';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
+} from 'react-native';
+import { PieChart } from "react-native-gifted-charts";
 
-import { mockOverallBudget } from '@/data/mockBudgets';
-import { mockSavingsGoal } from '@/data/mockInsights';
 
 import {
+  CATEGORY_COLOR_OPTIONS,
   COLORS,
   FONT_SIZE,
   FONT_WEIGHT,
@@ -57,34 +26,27 @@ import {
   SHADOWS,
   SPACING,
 } from '@/constants';
+import { buildSpendingBreakdown, CategorySpending, getCategoriesSpending } from '@/database/services/analyses';
 import { useBudgetStore, useTransactionStore, useUserStore } from '@/store';
-import { formatCurrency } from '@/utils/formatters';
+import { getDashboardRange } from '@/utils/date';
+import { formatCurrency, toTitleCase } from '@/utils/formatters';
+import { useSQLiteContext } from 'expo-sqlite';
+
+
 
 export default function DashboardScreen() {
-  /** Controls visibility of the Add Transaction modal */
+  const db=useSQLiteContext()
   const [modalVisible, setModalVisible] = useState(false);
-
-  /**
-   * Only show the 4 most recent transactions in the
-   * dashboard preview. The full list is on the History tab.
-   */
- const { user,summary } = useUserStore();
- const {budgets}=useBudgetStore();
- 
- // Pull real transactions from the store
- const { transactions } = useTransactionStore();
- 
- // Derive the first name for the greeting
- const firstName = user?.name.split(' ')[0] ?? 'there';
- 
-
- 
- // Recent transactions (first 4) — now from real store data
- const recentTransactions = transactions.slice(0, 4);
-
- const totalBudget = budgets.reduce((sum, b) => sum + b.amount, 0);
-
- const totalSpent = budgets.reduce(
+  const { user,summary,period,setSummary,setPeriod,percentChange,summaryLoading } = useUserStore();
+  const {budgets}=useBudgetStore(); 
+  const { transactions } = useTransactionStore(); 
+  const [categorySpending, setCategorySpending] =useState<CategorySpending[]>([]);
+  const firstName = user?.name.split(' ')[0] ?? 'there';
+  const recentTransactions = [...transactions].sort((a, b) => {
+    return Date.parse(b.date) - Date.parse(a.date);
+  });
+  const totalBudget = budgets.reduce((sum, b) => sum + b.amount, 0);
+  const totalSpent = budgets.reduce(
     (sum, b) => sum + ((b as any).spent ?? 0),
     0
   );
@@ -93,13 +55,53 @@ export default function DashboardScreen() {
         ? Math.min(100, Math.round((totalSpent / totalBudget) * 100))
         : 0;
 
-  /**
-   * Calculate the savings goal progress percentage.
-   */
-  const goalPercent = Math.round(
-    (mockSavingsGoal.currentAmount / mockSavingsGoal.targetAmount) * 100
-  );
+  const cyclePeriod = () => {
+      setPeriod();
+    };
+    const spendingBreakdown = useMemo(() => {
+    const getColor = (iconColor: string) =>
+      CATEGORY_COLOR_OPTIONS.find(
+        (option) => option.label === iconColor
+      )?.icon ?? COLORS.textMuted
 
+    return buildSpendingBreakdown(
+      categorySpending,
+      getColor,
+      COLORS.textMuted
+    );
+  }, [categorySpending])
+  useEffect(()=>{
+    //cleanup variable
+    let cancelled = false;
+
+    async function refreshSummary(){
+      if (summaryLoading) return
+      await setSummary(db)
+    }
+    if (!user) return;
+
+
+    async function loadSpending() {
+      const { startDate, endDate } = getDashboardRange(period);
+      try {
+        const result = await getCategoriesSpending(
+          db,
+          user!.id,
+          startDate,
+          endDate
+        );
+
+        if (!cancelled) {
+          setCategorySpending(result);
+        }
+      } catch (error) {
+        console.error('Failed to load category spending:', error)
+      }
+   }
+
+    loadSpending()
+    refreshSummary()
+  },[db,period,transactions,user?.id])
   return (
     /**
      * The outer View is position: 'relative' so the
@@ -123,23 +125,13 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* ── Total Balance Card ───────────────────── */}
-        <View style={styles.balanceCard}>
+        <Pressable style={styles.balanceCard} onPress={cyclePeriod}>
           <Text style={styles.balanceLabel}>Total Balance</Text>
           <Text style={styles.balanceAmount}>
             {formatCurrency(user!.balance)}
           </Text>
 
-          <View style={styles.balanceTrendRow}>
-            <Ionicons
-              name="trending-up"
-              size={14}
-              color={COLORS.primaryMuted}
-            />
-            <Text style={styles.balanceTrend}>
-              +₦320.40 from last month
-            </Text>
-          </View>
-        </View>
+        </Pressable>
 
         {/* ── Stats Grid ───────────────────────────── */}
         {/*
@@ -150,24 +142,21 @@ export default function DashboardScreen() {
          */}
         <View style={styles.statsGrid}>
           <StatCard
-            label="Monthly Income"
-            value={formatCurrency(summary?.periodIncome!)}
-            trend="+8%"
+            label={`${toTitleCase(period)} Income`}
+            func={cyclePeriod}
+            summaryLoading={summaryLoading}
+            value={summary?.periodIncome}
+            trend={percentChange?.incomeChange}
             trendPositive
           />
           <StatCard
-            label="Monthly Expense"
-            value={formatCurrency(summary?.periodExpense!)}
-            trend="-3%"
+            func={cyclePeriod}
+            summaryLoading={summaryLoading}
+            label={`${toTitleCase(period)} Expense`}
+            value={summary?.periodExpense}
+            trend={percentChange?.expenseChange}
             trendPositive={false}
           />
-          
-          {/*<StatCard
-            label="Monthly Savings"
-            value={formatCurrency(mockMonthlySummary.netSavings)}
-            trend="+12%"
-            trendPositive
-          />*/}
         </View>
 
         {/* ── Budget Progress Card ─────────────────── *
@@ -190,7 +179,7 @@ export default function DashboardScreen() {
           </View>
 
           <ProgressBar
-            percent={mockOverallBudget.percentUsed}
+            percent={overallPercent}
             height={10}
           />
 
@@ -201,40 +190,59 @@ export default function DashboardScreen() {
 
         {/* ── Spending Breakdown ───────────────────── */}
         <View style={styles.card}>
-          <SectionHeader title="Spending Breakdown" />
+          <SectionHeader title={`${toTitleCase(period)} Spending Breakdown`} />
 
-          {/*
-           * Simple visual approximation of the donut chart
-           * from the PDF using colored bars as a legend.
-           * TODO: Replace with real donut chart library.
-           */}
           <View style={styles.spendingBreakdown}>
-            {/*  Donut placeholder */}
-            <View style={styles.donutPlaceholder}>
-              <View style={styles.donutHole} />
-            </View>
+
 
             {/* Legend */}
-            <View style={styles.spendingLegend}>
-              {[
-                { label: 'Housing', percent: 40, color: COLORS.categoryBillsIcon },
-                { label: 'Dining', percent: 35, color: COLORS.categoryDiningIcon },
-                { label: 'Shopping', percent: 25, color: COLORS.categoryShoppingIcon },
-              ].map((item) => (
-                <View key={item.label} style={styles.legendRow}>
-                  <View
-                    style={[
-                      styles.legendDot,
-                      { backgroundColor: item.color },
-                    ]}
+            {(!summaryLoading)?(spendingBreakdown.length > 0 ? (
+              <>
+                <View style={styles.spendingChart}>
+                  <PieChart
+                    data={spendingBreakdown.map((item) => ({
+                      value: item.amount,
+                      color: item.color,
+                      text: item.label,
+                    }))}
+                    donut
+                    radius={90}
+                    innerRadius={60}
+                    innerCircleColor={COLORS.background}
+                    showText={false}
                   />
-                  <Text style={styles.legendLabel}>{item.label}</Text>
-                  <Text style={styles.legendPercent}>
-                    {item.percent}%
-                  </Text>
                 </View>
-              ))}
-            </View>
+
+                <View style={styles.spendingLegend}>
+                  {spendingBreakdown.map((item) => (
+                    <View key={item.label} style={styles.legendRow}>
+                      <View
+                        style={[
+                          styles.legendDot,
+                          { backgroundColor: item.color },
+                        ]}
+                      />
+
+                      <Text style={styles.legendLabel}>
+                        {item.label.split(' ')[0]}
+                      </Text>
+
+                      <Text style={styles.legendPercent}>
+                        {Math.round(item.percent)}%
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </>
+        ) : (
+          <View style={styles.emptySpending}>
+            <Text style={styles.emptySpendingText}>
+              No expenses recorded for this period.
+            </Text>
+          </View>
+        )):<View>
+          
+          </View>}
           </View>
         </View>
 
@@ -269,12 +277,6 @@ export default function DashboardScreen() {
             </View>
           ))}
         </View>
-
-        {/*
-         * Bottom padding so the last card is not hidden
-         * behind the FloatingActionButton when scrolled
-         * to the bottom.
-         */}
         <View style={styles.bottomPadding} />
       </ScrollView>
 
@@ -469,7 +471,22 @@ const styles = StyleSheet.create({
     fontWeight: FONT_WEIGHT.semiBold,
     color: COLORS.textPrimary,
   },
+  spendingChart: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: SPACING.md,
+  },
 
+  emptySpending: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.xl,
+  },
+
+  emptySpendingText: {
+    color: COLORS.textMuted,
+    textAlign: 'center',
+  },
   // ── Savings Goal ────────────────────────────────
   goalHeader: {
     flexDirection: 'row',

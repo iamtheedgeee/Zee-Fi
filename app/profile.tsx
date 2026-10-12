@@ -1,6 +1,17 @@
+
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
+import { useSQLiteContext } from 'expo-sqlite';
+import { Alert } from 'react-native';
+
+import { importTransactionsFromCsv } from '@/database/services/importTransactions';
+import { useBudgetStore, useTransactionStore } from '@/store';
+
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
+  Modal,
   ScrollView,
   StyleSheet,
   Switch,
@@ -23,17 +34,106 @@ import {
 import { useUserStore } from '@/store';
 
 export default function ProfileScreen() {
-  /**
-   * Local state for the notification toggle in the
-   * APP PREFERENCES section.
-   * TODO: Persist this preference to AsyncStorage or SQLite.
-   */
+
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const {user}=useUserStore()
-  /**
-   * Format the member since date into a readable string.
-   * e.g. "2023-01-15" → "JAN 2023"
-   */
+  const [isImporting, setIsImporting] = useState(false);
+  const {user}=useUserStore() 
+  const db = useSQLiteContext();
+  const {setTransactions} = useTransactionStore()
+  const {setBudgets}=useBudgetStore()
+  const {setBalance,setSummary} = useUserStore()
+
+  
+  const handleImportTransactions = async () => {
+    if (!user) {
+      Alert.alert('Error', 'No user is currently logged in.');
+      return;
+    }
+
+    try {
+      const picked = await DocumentPicker.getDocumentAsync({
+        type: [
+          'text/csv',
+          'text/comma-separated-values',
+          'public.comma-separated-values-text',
+        ],
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+
+      if (picked.canceled) return;
+
+      const file = picked.assets[0];
+
+      if (!file.name.toLowerCase().endsWith('.csv')) {
+        Alert.alert('Invalid file', 'Please select a CSV file.');
+        return;
+      }
+
+      setIsImporting(true);
+
+      // Give React Native time to render the modal before processing.
+      await new Promise<void>(resolve => setTimeout(resolve, 100));
+
+      let result;
+
+      try {
+        const csvContent = await FileSystem.readAsStringAsync(file.uri);
+
+        result = await importTransactionsFromCsv(
+          db,
+          user.id,
+          csvContent,
+        );
+
+        // Refresh Zustand only after the import service finishes.
+        await setTransactions(db, user.id);
+
+        const userRow = await db.getFirstAsync<{ balance: number }>(
+          'SELECT balance FROM users WHERE id = ?;',
+          user.id,
+        );
+
+        if (userRow) {
+          setBalance(userRow.balance);
+        }
+
+        await setSummary(db);
+      } finally {
+        setIsImporting(false);
+      }
+
+      const errorPreview = result.errors
+        .slice(0, 5)
+        .map(error => `Row ${error.row}: ${error.message}`)
+        .join('\n');
+
+      const remainingErrors = result.errors.length - 5;
+
+      const errorText = result.errors.length
+        ? `\n\nIssues:\n${errorPreview}${
+            remainingErrors > 0
+              ? `\n...and ${remainingErrors} more.`
+              : ''
+          }`
+        : '';
+
+      Alert.alert(
+        'Import complete',
+        `Imported: ${result.imported}\nSkipped: ${result.skipped}${errorText}`,
+      );
+    } catch (error) {
+      setIsImporting(false);
+
+      Alert.alert(
+        'Import failed',
+        error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred.',
+      );
+    }
+};
+
   const memberSinceFormatted = new Date(
     user!.createdAt
   ).toLocaleDateString('en-NG', {
@@ -90,8 +190,15 @@ export default function ProfileScreen() {
             iconColor={COLORS.primary}
             label="Edit Profile"
             onPress={() => {
-              // TODO: Navigate to Edit Profile screen
+
             }}
+          />      
+          <ProfileMenuItem
+            iconName="document-attach-outline"
+            iconBackground={COLORS.primaryMuted}
+            iconColor={COLORS.primary}
+            label="Import Transactions"
+            onPress={handleImportTransactions}
           />
 
           {/*<ProfileMenuItem
@@ -201,7 +308,7 @@ export default function ProfileScreen() {
             iconColor={COLORS.categoryGroceriesIcon}
             label="About ZeeFi AI"
             onPress={() => {
-              // TODO: Show about screen
+              //show about screen
             }}
           />
 
@@ -213,7 +320,7 @@ export default function ProfileScreen() {
             destructive
             onPress={() => {
               // TODO: Clear auth state and navigate to login
-              router.replace('/(auth)/login');
+              router.replace('/(auth)/register');
             }}
           />
         </View>
@@ -248,6 +355,28 @@ export default function ProfileScreen() {
 
         <View style={styles.bottomPadding} />
       </ScrollView>
+      <Modal
+        visible={isImporting}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => {}}
+      >
+        <View style={styles.importOverlay}>
+          <View style={styles.importCard}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+
+            <Text style={styles.importTitle}>
+              Importing transactions
+            </Text>
+
+            <Text style={styles.importDescription}>
+              Please wait while your transactions are being
+              processed. This may take a moment.
+            </Text>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -377,4 +506,33 @@ const styles = StyleSheet.create({
   bottomPadding: {
     height: SPACING['2xl'],
   },
+  importOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0, 0, 0, 0.55)',
+  justifyContent: 'center',
+  alignItems: 'center',
+  padding: SPACING.lg,
+},
+importCard: {
+  width: '100%',
+  maxWidth: 320,
+  backgroundColor: COLORS.background,
+  borderRadius: RADIUS.lg,
+  padding: SPACING.xl,
+  alignItems: 'center',
+  gap: SPACING.md,
+},
+
+importTitle: {
+  fontSize: FONT_SIZE.lg,
+  fontWeight: FONT_WEIGHT.semiBold,
+  textAlign: 'center',
+},
+
+importDescription: {
+  fontSize: FONT_SIZE.sm,
+  color: COLORS.textSecondary,
+  textAlign: 'center',
+  lineHeight: 21,
+},
 });

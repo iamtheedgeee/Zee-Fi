@@ -1,3 +1,10 @@
+export function toTitleCase(str:string) {
+  return str
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
 export function formatCurrency(amount: number | string, currency:string|false="₦"): string {
   return `${currency? currency: ''}${Number(amount).toLocaleString('en-NG', {
     minimumFractionDigits: 2,
@@ -76,9 +83,9 @@ export function formatDateGroupHeader(isoString: string): string {
 export function groupTransactionsByDate<T extends { date: string }>(
   transactions: T[]
 ): { dateLabel: string; transactions: T[] }[] {
-  const sortedTransactions = [...transactions].sort(
-    (a, b) => b.date.localeCompare(a.date)
-  );
+  const sortedTransactions=[...transactions].sort((a, b) => {
+    return Date.parse(b.date) - Date.parse(a.date);
+  })
   const groups: Record<string, T[]> = {};
 
   for (const transaction of sortedTransactions) {

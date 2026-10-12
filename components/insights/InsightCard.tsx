@@ -26,10 +26,10 @@ import { Insight, InsightSeverity } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface InsightCardProps {
@@ -55,6 +55,11 @@ const SEVERITY_CONFIG: Record<
     color: COLORS.warning,
     icon: 'warning-outline',
     background: '#FEF3C7',
+  },
+  danger:{
+    color:COLORS.danger,
+    icon: 'dangerous',
+    background:'#FEF3C7'
   },
   info: {
     color: COLORS.info,

@@ -17,25 +17,28 @@
  */
 
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants';
+import { formatCurrency } from '@/utils/formatters';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 interface StatCardProps {
   label: string;
-  value: string;
-  trend?: string;
+  func:()=>void;
+  summaryLoading:boolean;
+  value: number|undefined;
+  trend?: number|null;
   trendPositive?: boolean;
 }
 
 export default function StatCard({
   label,
+  func,
   value,
   trend,
+  summaryLoading,
   trendPositive = true,
 }: StatCardProps) {
   return (
-    <View style={styles.card}>
-      {/* Top row: label and optional trend badge */}
+    <Pressable style={styles.card} onPress={func}>
       <View style={styles.topRow}>
         <Text style={styles.label}>{label}</Text>
         {trend ? (
@@ -55,15 +58,15 @@ export default function StatCard({
                 { color: trendPositive ? COLORS.primary : COLORS.danger },
               ]}
             >
-              {trend}
+              {`${trend>0?'+':''}${trend}%`}
             </Text>
           </View>
         ) : null}
       </View>
 
       {/* Main value */}
-      <Text style={styles.value}>{value}</Text>
-    </View>
+      <Text style={styles.value}>{value?formatCurrency(value):'--'}</Text>
+    </Pressable>
   );
 }
 
