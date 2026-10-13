@@ -326,6 +326,7 @@ export default function CategoriesScreen() {
       <Modal
         visible={modalVisible}
         animationType="slide"
+        statusBarTranslucent={true}
         transparent
         onRequestClose={closeModal}
       >

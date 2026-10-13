@@ -1,5 +1,5 @@
 import { getPeriodTotals } from '@/database/services/analyses';
-import { User } from '@/database/services/user';
+import { deleteUser, User } from '@/database/services/user';
 import { DashboardPeriod } from '@/types';
 import { calculatePercentageChange, getDashboardRange, getPreviousComparisonRange } from '@/utils/date';
 import { SQLiteDatabase } from 'expo-sqlite';
@@ -26,7 +26,7 @@ interface UserState {
   setSummary: (db: SQLiteDatabase)=>Promise<void>
   
   setPeriod:()=>void;
-  clearUser: () => void;
+  clearUser: (db:SQLiteDatabase) => Promise<void>;
   setLoading: (loading: boolean) => void;
   setBalance: (balance: number) => void;
 }
@@ -79,7 +79,11 @@ export const useUserStore = create<UserState>((set,get) => ({
   setPeriod:()=>set((state)=>({
     period:state.period==='monthly'?'weekly':state.period==="weekly"?'yearly':'monthly'
   })),
-  clearUser: () => set({ user: null , summary: null}),
+  clearUser: async(db:SQLiteDatabase) =>{
+    await deleteUser(db,get().user?.id!) 
+    set({ user: null , summary: null})
+  
+    },
 
   setLoading: (loading) => set({ isLoading: loading }),
 

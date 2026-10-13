@@ -1,31 +1,28 @@
-/**
- * StatCard
- *
- * A small card showing a single financial stat with a label
- * above and a value below. Used in the 2x2 stats grid on
- * the Dashboard screen showing:
- *  - Monthly Income
- *  - Monthly Expense
- *  - Daily Budget
- *  - Monthly Savings
- *
- * Props:
- *  - label: the small grey label text at the top
- *  - value: the main value to display (formatted string)
- *  - trend: optional percentage change string e.g. "+8%"
- *  - trendPositive: if true, trend shows in green; false shows red
- */
 
-import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants';
+import {
+  COLORS,
+  FONT_SIZE,
+  FONT_WEIGHT,
+  RADIUS,
+  SHADOWS,
+  SPACING,
+} from '@/constants';
 import { formatCurrency } from '@/utils/formatters';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+
 interface StatCardProps {
   label: string;
-  func:()=>void;
-  summaryLoading:boolean;
-  value: number|undefined;
-  trend?: number|null;
+  func: () => void;
+  summaryLoading: boolean;
+  value: number | undefined;
+  trend?: number | null;
   trendPositive?: boolean;
 }
 
@@ -41,7 +38,8 @@ export default function StatCard({
     <Pressable style={styles.card} onPress={func}>
       <View style={styles.topRow}>
         <Text style={styles.label}>{label}</Text>
-        {trend ? (
+
+        {trend != null && trend !== 0 ? (
           <View
             style={[
               styles.trendBadge,
@@ -55,28 +53,37 @@ export default function StatCard({
             <Text
               style={[
                 styles.trendText,
-                { color: trendPositive ? COLORS.primary : COLORS.danger },
+                {
+                  color: trendPositive
+                    ? COLORS.primary
+                    : COLORS.danger,
+                },
               ]}
             >
-              {`${trend>0?'+':''}${trend}%`}
+              {`${trend > 0 ? '+' : ''}${trend.toFixed(0)}%`}
             </Text>
           </View>
         ) : null}
       </View>
 
-      {/* Main value */}
-      <Text style={styles.value}>{value?formatCurrency(value):'--'}</Text>
+      <View style={styles.valueContainer}>
+        {summaryLoading ? (
+          <ActivityIndicator
+            size="small"
+            color={COLORS.primary}
+          />
+        ) : (
+          <Text style={styles.value}>
+            {value != null ? formatCurrency(value) : '--'}
+          </Text>
+        )}
+      </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    /**
-     * Each StatCard takes up roughly half the row width.
-     * The parent screen uses a 2-column flexWrap layout
-     * so two cards sit side by side.
-     */
     flex: 1,
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.md,
@@ -108,10 +115,16 @@ const styles = StyleSheet.create({
     fontWeight: FONT_WEIGHT.semiBold,
   },
 
+  valueContainer: {
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    marginTop: SPACING.xs,
+  },
+
   value: {
     fontSize: FONT_SIZE.base,
     fontWeight: FONT_WEIGHT.bold,
     color: COLORS.textPrimary,
-    marginTop: SPACING.xs,
   },
 });

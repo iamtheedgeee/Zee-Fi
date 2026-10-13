@@ -5,7 +5,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { Alert } from 'react-native';
 
 import { importTransactionsFromCsv } from '@/database/services/importTransactions';
-import { useBudgetStore, useTransactionStore } from '@/store';
+import { useBudgetStore, useCategoryStore, useInsightStore, useTransactionStore } from '@/store';
 
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -40,9 +40,20 @@ export default function ProfileScreen() {
   const {user}=useUserStore() 
   const db = useSQLiteContext();
   const {setTransactions} = useTransactionStore()
-  const {setBudgets}=useBudgetStore()
+  const {reset:resetBudget}=useBudgetStore()
+  const {reset:resetCategory}=useCategoryStore()
+  const {reset:resetTransaction}=useTransactionStore()
+  const {reset:resetInsight}=useInsightStore()
+  const {clearUser:resetUser}=useUserStore()
   const {setBalance,setSummary} = useUserStore()
 
+  const resetAll=()=>{
+    resetBudget()
+    resetCategory()
+    resetInsight()
+    resetTransaction()
+    resetUser(db)
+  }
   
   const handleImportTransactions = async () => {
     if (!user) {
@@ -319,7 +330,7 @@ export default function ProfileScreen() {
             label="Logout"
             destructive
             onPress={() => {
-              // TODO: Clear auth state and navigate to login
+              resetAll()
               router.replace('/(auth)/register');
             }}
           />

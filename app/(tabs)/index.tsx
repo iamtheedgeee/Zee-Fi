@@ -8,6 +8,7 @@ import AddTransactionModal from '@/modals/AddTransactionModal3';
 import { router } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -44,7 +45,7 @@ export default function DashboardScreen() {
   const firstName = user?.name.split(' ')[0] ?? 'there';
   const recentTransactions = [...transactions].sort((a, b) => {
     return Date.parse(b.date) - Date.parse(a.date);
-  });
+  }).slice(0,4);
   const totalBudget = budgets.reduce((sum, b) => sum + b.amount, 0);
   const totalSpent = budgets.reduce(
     (sum, b) => sum + ((b as any).spent ?? 0),
@@ -56,6 +57,7 @@ export default function DashboardScreen() {
         : 0;
 
   const cyclePeriod = () => {
+      if(summaryLoading) return
       setPeriod();
     };
     const spendingBreakdown = useMemo(() => {
@@ -101,7 +103,7 @@ export default function DashboardScreen() {
 
     loadSpending()
     refreshSummary()
-  },[db,period,transactions,user?.id])
+  },[db,period,user?.id])
   return (
     /**
      * The outer View is position: 'relative' so the
@@ -128,7 +130,7 @@ export default function DashboardScreen() {
         <Pressable style={styles.balanceCard} onPress={cyclePeriod}>
           <Text style={styles.balanceLabel}>Total Balance</Text>
           <Text style={styles.balanceAmount}>
-            {formatCurrency(user!.balance)}
+            {formatCurrency(user?.balance??0)}
           </Text>
 
         </Pressable>
@@ -240,8 +242,11 @@ export default function DashboardScreen() {
               No expenses recorded for this period.
             </Text>
           </View>
-        )):<View>
-          
+        )):<View style={styles.emptySpending}>
+              <ActivityIndicator
+                          size="small"
+                          color={COLORS.primary}
+                />
           </View>}
           </View>
         </View>

@@ -51,7 +51,7 @@ export default function HistoryScreen() {
    * the DateFilterModal.
    */
   const [dateFilter, setDateFilter] = useState<DateFilter>(
-    () => buildPresetFilter('all')
+    () => buildPresetFilter('this_month')
   );
 
   /**

@@ -463,7 +463,7 @@ function analyseIncomeShare(data: EngineInput): InsightResult[] {
       title: `Income concentrated in ${entry.categoryName}`,
       message:
         share >= 90
-          ? `${entry.categoryName} is your only income source ${period} (${fmt(entry.total, sym)}). Consider diversifying.`
+          ? `${entry.categoryName} is your only income source ${period} (${fmt(entry.total, sym)}).`
           : `${entry.categoryName} accounts for ${r1(share)}% of your income ${period} (${fmt(entry.total, sym)}).`,
       relevanceScore: 25 + share * 0.3,
       periodType: data.periodType,
