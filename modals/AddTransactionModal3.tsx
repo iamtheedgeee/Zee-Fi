@@ -8,7 +8,7 @@ import {
   SPACING,
 } from '@/constants';
 import { getCategorySpending } from '@/database/services/analyses';
-import { getBudgetByCategory } from '@/database/services/budget';
+import { Budget, getBudgetByCategory } from '@/database/services/budget';
 import { createTransaction } from '@/database/services/transaction';
 import {
   useBudgetStore,
@@ -22,6 +22,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Modal,
   ScrollView,
   StyleSheet,
@@ -80,7 +81,7 @@ function formatAmountInput(value: string): string {
   const db = useSQLiteContext();
 
   // ── Store access ────────────────────────────────────────
-  const { user, setBalance, setSummary } = useUserStore();
+  const { user, setBalance, setSummary, } = useUserStore();
   const { addTransaction } = useTransactionStore();
   const {updateBudgetProgress}=useBudgetStore();
   const { categories } = useCategoryStore();
@@ -162,37 +163,49 @@ function formatAmountInput(value: string): string {
 
     return valid;
   }
-  async function refreshBudgetForCategory(categoryId: number) {
-    const budget = await getBudgetByCategory(db,user!.id,categoryId);
 
+  async function refreshBudgetForCategory(budget:Budget|null|false, spent:number) {
     if (!budget) return;
-
-    const spent = await getCategorySpending(
-      db,
-      user!.id,
-      categoryId,
-      budget.startDate,
-      budget.endDate
-    );
-
     updateBudgetProgress(budget.id, spent);
+    return spent
   }
   async function handleSave() {
     if (!user) return;
     if (!validate()) return;
     setIsLoading(true);
     try {
+      const budget=transactionType==="expense" && await getBudgetByCategory(db,user!.id,selectedCategoryId!);
+      const amount=parseFloat(amountText.replace(/,/g, ''))
+      if(amount>user.balance && transactionType==="expense"){
+        Alert.alert("Insufficient Balance.Bad records ruin insights")
+        return
+      }
+      
+      let spent=0
+      if(budget){
+        spent = await getCategorySpending(
+            db,
+            user!.id,
+            selectedCategoryId!,
+            budget.startDate,
+            budget.endDate
+        );
+        if(amount+spent>budget.amount){
+          Alert.alert('This will exceed your budget for this category');
+          return 
+        }
+      }
       const { transaction, newBalance } = await createTransaction(db, {
         userId: user.id,
         categoryId: selectedCategoryId!,
-        amount: parseFloat(amountText.replace(/,/g, '')),
+        amount,
         type: transactionType,
         date:`${date}T${new Date().toTimeString().slice(0, 8)}`,
         notes: note.trim() || undefined,
       });
       addTransaction(transaction);
       setBalance(newBalance);
-      refreshBudgetForCategory(transaction.categoryId)
+      refreshBudgetForCategory(budget,spent+amount)
       resetForm();
       onClose();
       onSaved?.();
