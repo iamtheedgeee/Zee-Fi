@@ -77,15 +77,6 @@ const user = await db.getFirstAsync<User>(
 }
 */
 
-/**
- * Adjusts the user's balance by a signed delta.
- * Pass a positive number to add (income).
- * Pass a negative number to subtract (expense).
- *
- * Using a delta rather than setting an absolute value
- * prevents race conditions and makes reversal easy:
- * to undo an income of 500, pass delta = -500.
- */
 export async function adjustUserBalance(
   db: SQLiteDatabase,
   userId: number,

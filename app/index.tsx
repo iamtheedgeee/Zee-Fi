@@ -91,41 +91,12 @@ export default function SplashScreen() {
     );
     pulseDots.start();
 
-    // ── Step 4: Check DB and navigate ───────────────────
-    /**
-     * We run the DB check and a minimum wait simultaneously.
-     * Navigation only happens after BOTH resolve.
-     * This prevents the logo from flashing too briefly.
-     */
-    /*const minimumDisplayTime = new Promise<void>((resolve) =>
-      setTimeout(resolve, 1400)
-    );
-
-    const authCheck = checkForUser();
-
-    Promise.all([minimumDisplayTime, authCheck]).then(([, hasUser]) => {
-      pulseDots.stop();
-
-      if (hasUser) {
-        router.replace('/(tabs)');
-      } else {
-        router.replace('/(auth)/register');
-      }
-    });
-
-    // Cleanup: stop all animations if the component unmounts
-    // before the promises resolve (e.g. hot reload during dev)
-    */
+   
     return () => {
       pulseDots.stop();
     };
   }, []);
   useEffect(() => {
-    /**
-     * We wait for at least 1400ms minimum display time
-     * AND for the loading flag to be false. This prevents
-     * a jarring instant redirect if the DB check is fast.
-     */
     if (isLoading) return;
 
     const timer = setTimeout(() => {
