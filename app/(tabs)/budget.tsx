@@ -60,7 +60,13 @@ export default function BudgetScreen() {
    * Only expense categories make sense for budgets.
    * You budget against what you spend, not what you earn.
    */
-  const expenseCategories = categories.filter((c) => c.type === 'expense');
+  const categoryTaken=(categoryId:number)=>{
+    for(const budget of budgets){
+      if(budget.categoryId===categoryId)return true
+    }
+  }
+ 
+  const expenseCategories = categories.filter((c) => (c.type === 'expense' && !categoryTaken(c.id)));
 
   const selectedCategory = categories.find(
     (c) => c.id === selectedCategoryId

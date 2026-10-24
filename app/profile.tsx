@@ -1,22 +1,18 @@
 //Profile screen
-import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system/legacy';
-import { useSQLiteContext } from 'expo-sqlite';
-import { Alert } from 'react-native';
-
 import { importTransactionsFromCsv } from '@/database/services/importTransactions';
 import { useBudgetStore, useCategoryStore, useInsightStore, useTransactionStore } from '@/store';
-
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import { router } from 'expo-router';
+import { useSQLiteContext } from 'expo-sqlite';
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
-  Modal,
+  ActivityIndicator, Alert, Modal,
   ScrollView,
   StyleSheet,
   Switch,
   Text,
-  View,
+  View
 } from 'react-native';
 
 import ScreenHeader from '@/components/common/ScreenHeader';
@@ -31,12 +27,21 @@ import {
   SHADOWS,
   SPACING,
 } from '@/constants';
+import { logoutLocalUser, logoutOnline } from '@/database/services/auth';
+import { hasUnsyncedChanges, syncUserData } from '@/database/services/sync';
+import LogoutConfirmModal from '@/modals/LogoutConfirmModal';
+import SyncStatusModal from '@/modals/SyncStatusModal';
 import { useUserStore } from '@/store';
 
 export default function ProfileScreen() {
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [isImporting, setIsImporting] = useState(false);
+  const [syncMessage,setSyncMessage]=useState('')
+  const [syncStatus,setSyncStatus]=useState<"success"|"error"|"loading">('loading')
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [loggingOut,setLoggingOut]=useState(false)
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const {user}=useUserStore() 
   const db = useSQLiteContext();
   const {setTransactions} = useTransactionStore()
@@ -47,13 +52,81 @@ export default function ProfileScreen() {
   const {clearUser:resetUser}=useUserStore()
   const {setBalance,setSummary} = useUserStore()
 
-  const resetAll=()=>{
-    resetBudget()
-    resetCategory()
-    resetInsight()
-    resetTransaction()
-    resetUser(db)
+
+  const handleSync = async () => {
+    const unsynced = await hasUnsyncedChanges(db, user!.id);
+
+    if (!unsynced) {
+      Alert.alert("You Have No New Changes to Sync")
+      return;
+    }
+    setShowLogoutModal(false)
+    setSyncStatus('loading');
+    setSyncMessage('');
+    setShowSyncModal(true);
+
+    try {
+      await syncUserData(db, user!);
+      setSyncStatus('success');
+      setSyncMessage('Your financial data is up to date.');
+    } catch (error) {
+      console.error('Sync failed:', error);
+
+      setSyncStatus('error');
+      setSyncMessage(
+        error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred. Please try again.',
+      );
+    } 
+};
+  const handleSyncClick=() => {
+    user?.supabaseUserId
+      ?handleSync()
+      :router.push('/sync-account');
   }
+  const handleLogoutClick = async () => {
+    const unsynced = await hasUnsyncedChanges(db, user!.id);
+
+    if (unsynced) {
+      setShowLogoutModal(true);
+      return;
+    }
+
+    await logout();
+  };
+
+  const logout = async () => {
+    if (!user) return;
+    setLoggingOut(true)
+    try {
+      // Remove the local logged-in flag.
+      await logoutLocalUser(db, user.id);
+
+      // Clear the Supabase session if this user
+      // has an online account.
+      if (user.supabaseUserId) {
+        await logoutOnline();
+      }
+
+      // Clear the Zustand stores.
+      resetBudget();
+      resetCategory();
+      resetInsight();
+      resetTransaction();
+      resetUser(db);
+
+      router.replace('/(auth)/login');
+    } catch (error) {
+      Alert.alert(
+        'Logout failed',
+        error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred.'
+      );
+    }
+  };
+
   
   const handleImportTransactions = async () => {
     if (!user) {
@@ -212,25 +285,19 @@ export default function ProfileScreen() {
             onPress={handleImportTransactions}
           />
 
-          {/*<ProfileMenuItem
-            iconName="shield-outline"
-            iconBackground="#EDE9FE"
-            iconColor="#7C3AED"
-            label="Security & Privacy"
-            onPress={() => {
-              // TODO: Navigate to Security screen
-            }}
+          <ProfileMenuItem
+            iconName="cloud-upload-outline"
+            iconBackground={COLORS.primaryMuted}
+            iconColor={COLORS.primary}
+            label={
+              user?.supabaseUserId
+                ? 'Sync Account'
+                : 'Create Online Account'
+            }
+            onPress={handleSyncClick}
           />
 
-          <ProfileMenuItem
-            iconName="card-outline"
-            iconBackground={COLORS.categoryEntertainment}
-            iconColor={COLORS.categoryEntertainmentIcon}
-            label="Payment Methods"
-            onPress={() => {
-              // TODO: Navigate to Payment Methods screen
-            }}
-          />*/}
+          
 
           <ProfileMenuItem
             iconName="grid-outline"
@@ -265,14 +332,12 @@ export default function ProfileScreen() {
           <ProfileMenuItem
             iconName="notifications-outline"
             iconBackground={COLORS.categoryHealth}
-            iconColor={COLORS.categoryHealthIcon}
-            label="Notification Settings"
+            iconColor={'infinite'}
+            label="Enforce Budgets"
             onPress={() => {}}
             rightElement={
               /*
-               * The Switch component is used directly as the
-               * right element for the notifications row.
-               * This matches the toggle shown in the PDF.
+               * Handles whether or not the budgets will be enforced when logging an expense
                */
               <Switch
                 value={notificationsEnabled}
@@ -294,14 +359,14 @@ export default function ProfileScreen() {
             iconColor={COLORS.categoryTravelIcon}
             label="Data Export"
             onPress={() => {
-              // TODO: Implement CSV/PDF export
+              //
             }}
           />
         </View>
 
         {/* ── Support & Legal Section ──────────────── */}
         <View style={styles.menuCard}>
-          <ProfileSectionHeader title="Support & Legal" />
+          <ProfileSectionHeader title="Support & Help" />
 
           <ProfileMenuItem
             iconName="help-circle-outline"
@@ -309,7 +374,7 @@ export default function ProfileScreen() {
             iconColor={COLORS.primary}
             label="Help Center"
             onPress={() => {
-              // TODO: Open help center
+              //Open help center
             }}
           />
 
@@ -317,7 +382,7 @@ export default function ProfileScreen() {
             iconName="information-circle-outline"
             iconBackground={COLORS.categoryGroceries}
             iconColor={COLORS.categoryGroceriesIcon}
-            label="About ZeeFi AI"
+            label="About ZeeFi"
             onPress={() => {
               //show about screen
             }}
@@ -330,38 +395,14 @@ export default function ProfileScreen() {
             label="Logout"
             destructive
             onPress={() => {
-              resetAll()
-              router.replace('/(auth)/register');
+              handleLogoutClick()
             }}
           />
-        </View>
-
-        {/* ── Delete Account ───────────────────────── */}
-        {/*
-         * Destructive action placed at the very bottom
-         * and visually separated from other options to
-         * reduce the chance of accidental taps.
-         */}
-        <View style={styles.deleteSection}>
-          <ProfileMenuItem
-            iconName="trash-outline"
-            iconBackground="#FFE4E4"
-            iconColor={COLORS.danger}
-            label="Delete Account"
-            destructive
-            onPress={() => {
-              // TODO: Show confirmation dialog before deleting
-              console.log('TODO: Confirm and delete account');
-            }}
-          />
-          <Text style={styles.deleteSubtext}>
-            Deletes your account and all your financial data from ZeeFi.
-          </Text>
         </View>
 
         {/* ── Footer ──────────────────────────────── */}
         <Text style={styles.footer}>
-          ZeeFi AI • Version 1.0.0
+          ZeeFi • Version 1.0.0
         </Text>
 
         <View style={styles.bottomPadding} />
@@ -388,6 +429,35 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+      <Modal
+        visible={loggingOut}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => {}}
+      >
+        <View style={styles.importOverlay}>
+          <View style={styles.importCard}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+
+            <Text style={styles.importTitle}>
+              LOGGING OUT
+            </Text>
+          </View>
+        </View>
+      </Modal>
+      <SyncStatusModal
+        visible={showSyncModal}
+        status={syncStatus}
+        message={syncMessage}
+        onClose={() => setShowSyncModal(false)}
+      />
+      <LogoutConfirmModal
+        visible={showLogoutModal}
+        onSync={handleSyncClick}
+        onLogout={logout}
+        onCancel={() => setShowLogoutModal(false)}
+      />
     </View>
   );
 }

@@ -1,3 +1,15 @@
+import FloatingActionButton from '@/components/common/FloatingActionButton';
+import ProgressBar from '@/components/common/ProgressBar';
+import SectionHeader from '@/components/common/SectionHeader';
+import InsightCard from '@/components/insights/InsightCard';
+import { InsightPeriodType } from '@/database/services/insightEngine';
+import { Transaction } from '@/database/services/transaction';
+import { useInsights } from '@/hooks/useInsights';
+import AddTransactionModal from '@/modals/AddTransactionModal3';
+import { useBudgetStore } from '@/store/budgetStore';
+import { useCategoryStore } from '@/store/categoryStore';
+import { useTransactionStore } from '@/store/transactionStore';
+import { useUserStore } from '@/store/userStore';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useMemo, useState } from 'react';
@@ -11,19 +23,6 @@ import {
   View,
 } from 'react-native';
 import { BarChart, LineChart, PieChart } from 'react-native-gifted-charts';
-
-import FloatingActionButton from '@/components/common/FloatingActionButton';
-import ProgressBar from '@/components/common/ProgressBar';
-import SectionHeader from '@/components/common/SectionHeader';
-import InsightCard from '@/components/insights/InsightCard';
-import { InsightPeriodType } from '@/database/services/insightEngine';
-import { Transaction } from '@/database/services/transaction';
-import { useInsights } from '@/hooks/useInsights';
-import AddTransactionModal from '@/modals/AddTransactionModal';
-import { useBudgetStore } from '@/store/budgetStore';
-import { useCategoryStore } from '@/store/categoryStore';
-import { useTransactionStore } from '@/store/transactionStore';
-import { useUserStore } from '@/store/userStore';
 
 import ScreenHeader from '@/components/common/ScreenHeader';
 import {
@@ -562,15 +561,15 @@ export default function InsightsScreen() {
 
   return (
     <View style={styles.screen}>
+      <ScreenHeader
+        title="ZeeFi AI"
+        subtitle="Financial Insights"
+      />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-      <ScreenHeader
-        title="ZeeFi AI"
-        subtitle="Financial Insights"
-      />
         {/* ── Page title ────────────────────────── */}
         <View style={styles.pageTitleSection}>
           <Text style={styles.pageTitle}>Financial Insights</Text>
@@ -665,7 +664,7 @@ export default function InsightsScreen() {
         {/* ════════════════════════════════════════
             CHART 1 — Income vs Expenses Bar Chart
             ════════════════════════════════════════ */}
-        <View style={styles.chartCard}>
+        {<View style={styles.chartCard}>
           <SectionHeader title="Income vs Expenses" />
 
           {/* Legend */}
@@ -768,7 +767,7 @@ export default function InsightsScreen() {
               </View>
             </View>
           )}
-        </View>
+        </View>}
 
         {/* ════════════════════════════════════════
             CHART 2 — Daily Spending Area Chart

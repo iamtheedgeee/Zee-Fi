@@ -5,16 +5,19 @@
  */
 
 import type { SQLiteDatabase } from 'expo-sqlite';
+import { markUnsynced } from './user';
 
 export type Category = {
   id: number;
   userId: number;
+  syncId: string | null;
   name: string;
   iconName:string;
   iconColor:string;
   type: 'income' | 'expense';
   createdAt: string;
   updatedAt: string;
+  deletedAt: string |null;
 };
 
 export type CreateCategoryInput = {
@@ -77,7 +80,7 @@ export async function createCategory(
   if (!category) {
     throw new Error('Failed to retrieve the newly created category.');
   }
-
+  await markUnsynced(db, input.userId);
   return category;
 }
 
@@ -112,7 +115,7 @@ export async function updateCategory(
   if (!category) {
     throw new Error(`Category with id ${id} not found after update.`);
   }
-
+    await markUnsynced(db, category.userId);
   return category;
 }
   
@@ -128,8 +131,10 @@ export async function deleteCategory(
   db: SQLiteDatabase,
   id: number
 ): Promise<void> {
-  await db.runAsync(
+  const cat=await db.runAsync(
     `DELETE FROM categories WHERE id = ?;`,
     id
   );
+    //await markUnsynced(db, cat.userId);
+
 }

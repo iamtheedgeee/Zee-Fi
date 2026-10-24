@@ -6,8 +6,10 @@
 
 import { getPeriodRange } from '@/utils/date';
 import type { SQLiteDatabase } from 'expo-sqlite';
+import { markUnsynced } from './user';
 export type Budget = {
   id: number;
+  syncId: string | null;
   userId: number;
   categoryId: number;
   amount: number;
@@ -16,6 +18,7 @@ export type Budget = {
   endDate: string;
   createdAt: string;
   updatedAt: string;
+  deletedAt: string |null;
 };
 
 export type CreateBudgetInput = {
@@ -102,14 +105,11 @@ export async function createBudget(
   if (!budget) {
     throw new Error('Failed to retrieve the newly created budget.');
   }
-
+  await markUnsynced(db, input.userId);
   return budget;
 }
 
-/**
- * Updates a budget.
- */
-/*
+
 export async function updateBudget(
   db: SQLiteDatabase,
   id: number,
@@ -119,14 +119,13 @@ export async function updateBudget(
   if (fields.length === 0) throw new Error('No fields to update.');
 
   const setClauses = fields.map((f) => `${f} = ?`).join(', ');
-  const values = fields.map((f) => input[f]);
+  const values = fields.map((f) => input[f] ?? null);
 
   await db.runAsync(
     `UPDATE budgets
      SET ${setClauses}, updatedAt = CURRENT_TIMESTAMP
      WHERE id = ?;`,
-    ...values,
-    id
+    [...values,id]
   );
 
   const budget = await db.getFirstAsync<Budget>(
@@ -137,10 +136,10 @@ export async function updateBudget(
   if (!budget) {
     throw new Error(`Budget with id ${id} not found after update.`);
   }
-
+    await markUnsynced(db, budget.userId);
   return budget;
 }
-*/
+
 /**
  * Deletes a budget.
  */
@@ -152,6 +151,8 @@ export async function deleteBudget(
     `DELETE FROM budgets WHERE id = ?;`,
     id
   );
+//    await markUnsynced(db, input.userId);
+
 }
 
 

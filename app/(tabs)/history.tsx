@@ -90,11 +90,18 @@ export default function HistoryScreen() {
      * works correctly for date ordering.
      */
     if (isDateFiltered) {
-      filtered = filtered.filter(
-        (t) =>
-          t.date >= dateFilter.startDate &&
-          t.date <= dateFilter.endDate
-      );
+      console.log(dateFilter)
+      filtered = filtered.filter((t) => {
+        const transactionTime = new Date(t.date).getTime();
+        const startTime = new Date(dateFilter.startDate).getTime();
+        const endDate = new Date(dateFilter.endDate);
+        endDate.setHours(23, 59, 59, 999);
+        const endTime = endDate.getTime()
+        console.log(`
+          [start time:${startTime}, transTime:${transactionTime}, endTime:${endTime}]\n  
+          `)
+        return transactionTime >= startTime && transactionTime <= endTime;
+      });
     }
 
     return groupTransactionsByDate(filtered);
@@ -135,34 +142,27 @@ export default function HistoryScreen() {
         <View style={styles.pageTitleSection}>
           <Text style={styles.pageTitle}>Transaction History</Text>
           <Text style={styles.pageSubtitle}>
-            Keep track of every cent you grow.
+            Keep track of every cent you spend.
           </Text>
         </View>
 
         {/* ── Summary row ─────────────────────────── */}
         <View style={styles.summaryRow}>
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>SPENT THIS MTH</Text>
+            <Text style={styles.summaryLabel}>TOTAL SPENT</Text>
             <Text style={[styles.summaryValue, { color: COLORS.expense }]}>
               {formatCurrency(totalExpense)}
             </Text>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>AVG. PER DAY</Text>
+            <Text style={styles.summaryLabel}>TOTAL RECEIVED</Text>
             <Text style={[styles.summaryValue, { color: COLORS.income }]}>
-              {formatCurrency(totalExpense / 30)}
+              {formatCurrency(totalIncome)}
             </Text>
           </View>
         </View>
 
-        {/* ── Search + filter button row ───────────── */}
-        {/**
-         * The SearchBar already has a showFilter prop but we
-         * want the filter button to be visually distinct when
-         * a date filter is active, so we render the filter
-         * button separately beside the search bar.
-         */}
         <View style={styles.searchRow}>
           <View style={styles.searchBarWrapper}>
             <SearchBar

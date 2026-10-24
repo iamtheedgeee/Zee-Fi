@@ -1,15 +1,17 @@
 
 import type { SQLiteDatabase } from 'expo-sqlite';
-export type User = {
+export interface User {
   id: number;
   name: string;
   email: string | null;
   currency: string;
   balance: number;
+  initialBalance: number;
+  loggedIn: number;
+  supabaseUserId: string | null;
   createdAt: string;
   updatedAt: string;
-};
-
+}
 export async function createUser(
   db: SQLiteDatabase,
   name: string,
@@ -19,10 +21,11 @@ export async function createUser(
 ): Promise<User> {
   console.log(name,email,currency)
   const result = await db.runAsync(
-    `INSERT INTO users (name, email, currency, balance) VALUES (?, ?, ?, ?)`,
+    `INSERT INTO users (name, email, currency, balance, initialBalance) VALUES (?, ?, ?, ?, ?)`,
     name,
     email,
     currency,
+    balance,
     balance,
   );
   const user = await db.getFirstAsync<User>(
@@ -67,14 +70,6 @@ export async function getFirstUser(
     id
   );
   
-
-const user = await db.getFirstAsync<User>(
-    `SELECT * FROM users WHERE id = ?;`,
-    id
-  );
-  if (!user) throw new Error(`User with id ${id} not found after update.`);
-  return user;
-}
 */
 
 export async function adjustUserBalance(
@@ -104,4 +99,16 @@ export async function deleteUser(
   id: number
 ): Promise<void> {
   await db.runAsync(`DELETE FROM users WHERE id = ?;`, id);
+}
+
+export async function markUnsynced(
+  db: SQLiteDatabase,
+  userId: number
+) {
+  await db.runAsync(
+    `UPDATE users
+     SET hasUnsyncedChanges = 1
+     WHERE id = ?;`,
+    userId
+  );
 }

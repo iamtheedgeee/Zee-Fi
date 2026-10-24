@@ -17,7 +17,7 @@ export default function RootLayout() {
         console.log("All deleted and ready")
       }
       try{
-        resetDatabase();
+        //resetDatabase();
       }catch(error){
         console.log(error)
       }
@@ -100,6 +100,13 @@ export default function RootLayout() {
             name="categories"
             options={{
               title: 'Manage Categories',
+              headerShown: true,
+            }}
+          />
+          <Stack.Screen
+            name="sync-account"
+            options={{
+              title: 'Sync Account',
               headerShown: true,
             }}
           />

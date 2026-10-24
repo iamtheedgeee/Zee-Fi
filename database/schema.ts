@@ -12,6 +12,9 @@ export async function initializeDatabase(db: SQLiteDatabase) {
       currency TEXT NOT NULL DEFAULT 'NGN',
       balance REAL NOT NULL DEFAULT 0,
       initialBalance REAL NOT NULL DEFAULT 0,
+      loggedIn INTEGER NOT NULL DEFAULT 0,
+      supabaseUserId TEXT,
+      hasUnsyncedChanges INTEGER NOT NULL DEFAULT 0,
       createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
@@ -23,6 +26,8 @@ export async function initializeDatabase(db: SQLiteDatabase) {
       type TEXT NOT NULL CHECK (type IN ('income', 'expense')),
       iconName TEXT NOT NULL,
       iconColor TEXT NOT NULL,
+      syncId TEXT UNIQUE,
+      deletedAt TEXT,
       createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
@@ -36,8 +41,10 @@ export async function initializeDatabase(db: SQLiteDatabase) {
       type TEXT NOT NULL CHECK (type IN ('income', 'expense')),
       date TEXT NOT NULL,
       notes TEXT,
+      syncId TEXT UNIQUE,
       createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      deletedAt TEXT,
       FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE,
       FOREIGN KEY (categoryId) REFERENCES categories(id) ON DELETE RESTRICT
     );
@@ -45,13 +52,15 @@ export async function initializeDatabase(db: SQLiteDatabase) {
     CREATE TABLE IF NOT EXISTS budgets (
       id INTEGER PRIMARY KEY NOT NULL,
       userId INTEGER NOT NULL,
-      categoryId INTEGER NOT NULL,
+      categoryId INTEGER UNIQUE NOT NULL,
       amount REAL NOT NULL,
       period TEXT NOT NULL CHECK (period IN ('weekly', 'monthly', 'yearly')),
       startDate TEXT NOT NULL,
       endDate TEXT NOT NULL,
+      syncId TEXT UNIQUE,
       createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      deletedAt TEXT,
       FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE,
       FOREIGN KEY (categoryId) REFERENCES categories(id) ON DELETE CASCADE
     );

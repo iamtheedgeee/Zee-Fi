@@ -75,7 +75,8 @@ export default function DashboardScreen() {
   useEffect(()=>{
     //cleanup variable
     let cancelled = false;
-
+    console.log("h")
+    console.log(transactions)
     async function refreshSummary(){
       if (summaryLoading) return
       await setSummary(db)
@@ -103,7 +104,7 @@ export default function DashboardScreen() {
 
     loadSpending()
     refreshSummary()
-  },[db,period,user?.id])
+  },[db,period,user?.id,transactions])
   return (
     /**
      * The outer View is position: 'relative' so the
@@ -186,7 +187,6 @@ export default function DashboardScreen() {
           />
 
           <Text style={styles.budgetStatusText}>
-            ✓ You are on track to stay within budget.
           </Text>
         </View>
 

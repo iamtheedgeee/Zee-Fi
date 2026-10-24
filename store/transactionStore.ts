@@ -66,7 +66,8 @@ export const useTransactionStore = create<TransactionState>((set) => ({
     console.log("Fetching  Transactions")
     try {
       const transactions = await getTransactions(db, userId);
-      console.log("Yayy Transactions fetched")
+      console.log("Yayy Transactions fetched",transactions)
+
       set({ transactions });
     } catch (error) {
       set({ error: 'Failed to load transactions.' });
@@ -79,7 +80,7 @@ export const useTransactionStore = create<TransactionState>((set) => ({
     set((state) => ({
       transactions: [transaction, ...state.transactions],
     })),
-
+    
   updateTransaction: (transaction) =>
     set((state) => ({
       transactions: state.transactions.map((t) =>

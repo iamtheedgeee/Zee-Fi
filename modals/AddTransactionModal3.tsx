@@ -203,6 +203,7 @@ function formatAmountInput(value: string): string {
         date:`${date}T${new Date().toTimeString().slice(0, 8)}`,
         notes: note.trim() || undefined,
       });
+      console.log("new transaction",transaction.id)
       addTransaction(transaction);
       setBalance(newBalance);
       refreshBudgetForCategory(budget,spent+amount)

@@ -1,5 +1,6 @@
 
 import type { SQLiteDatabase } from 'expo-sqlite';
+import { markUnsynced } from './user';
 
 export type ImportRowError = {
   row: number;
@@ -215,7 +216,8 @@ export async function importTransactionsFromCsv(
           userId
         );
       });
-
+        await markUnsynced(db, userId);
+      
       result.imported++;
     } catch (error) {
       result.skipped++;
