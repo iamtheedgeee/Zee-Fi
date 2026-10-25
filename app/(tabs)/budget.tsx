@@ -17,6 +17,7 @@ import FloatingActionButton from '@/components/common/FloatingActionButton';
 import ProgressBar from '@/components/common/ProgressBar';
 import ScreenHeader from '@/components/common/ScreenHeader';
 
+import EditBudgetModal from '@/components/budget/EditBudgetModal';
 import {
   COLORS,
   FONT_SIZE,
@@ -34,6 +35,7 @@ import {
   useCategoryStore,
   useUserStore,
 } from '@/store';
+import { InStateBudget } from '@/store/budgetStore';
 import { getPeriodRange } from '@/utils/date';
 import { formatCurrency } from '@/utils/formatters';
 
@@ -55,6 +57,8 @@ export default function BudgetScreen() {
   const [amountError, setAmountError] = useState('');
   const [categoryError, setCategoryError] = useState('');
 
+  const [editingBudget, setEditingBudget] = useState<InStateBudget | null>(null);
+  const [editBudgetVisible, setEditBudgetVisible] = useState(false);
   // ── Derived values ──────────────────────────────────────
   /**
    * Only expense categories make sense for budgets.
@@ -147,7 +151,7 @@ export default function BudgetScreen() {
 
   async function handleDeleteBudget(id: number) {
     try {
-      await deleteBudget(db, id);
+      await deleteBudget(db,id,user!.id);
       removeBudget(id);
     } catch (error) {
       console.error('Failed to delete budget:', error);
@@ -231,13 +235,15 @@ export default function BudgetScreen() {
                 <BudgetCategoryItem
                   key={budget.id}
                   budget={budget}
-                  onPress={() => {}}
-                  /*onDelete={() => handleDeleteBudget(budget.id)}*/
-                />
+                  onEdit={() => {
+                  setEditingBudget(budget);
+                  setEditBudgetVisible(true);
+                }}
+                onDelete={() => handleDeleteBudget(budget.id)}
+                            />
               ))}
             </View>
           )}
-
           <View style={styles.bottomPadding} />
         </ScrollView>
       )}
@@ -426,6 +432,14 @@ export default function BudgetScreen() {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+      <EditBudgetModal
+        visible={editBudgetVisible}
+        budget={editingBudget}
+        onClose={() => {
+          setEditBudgetVisible(false);
+          setEditingBudget(null);
+        }}
+      />
     </View>
   );
 }

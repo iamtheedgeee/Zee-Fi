@@ -1,5 +1,6 @@
 
 import { getLoggedInUser } from '@/database/services/auth';
+import { getUsers } from '@/database/services/user';
 
 import {
   useBudgetStore,
@@ -32,8 +33,10 @@ export function useAppInit() {
   useEffect(() => {
     async function init() {
       try {
+        const users=await getUsers(db)
+        console.log('users',users)
         const user = await getLoggedInUser(db);
-
+        console.log("user",user)
         if (user) {
           await Promise.all([
             setTransactions(db, user.id),

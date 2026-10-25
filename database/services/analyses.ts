@@ -20,6 +20,7 @@ export async function getPeriodTotals(
       SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS expense
     FROM transactions
     WHERE userId = ?
+      AND deletedAt IS NULL
       AND substr(date, 1, 10) BETWEEN ? AND ?
     `,
     [userId, startDate, endDate]
@@ -46,6 +47,7 @@ export async function getCategorySpending(
     SELECT SUM(amount) AS total
     FROM transactions
     WHERE userId = ?
+      AND deletedAt IS NULL
       AND categoryId = ?
       AND type = 'expense'
       AND substr(date, 1, 10) BETWEEN ? AND ?
@@ -79,6 +81,7 @@ export async function getCategoriesSpending(
      FROM transactions t
      JOIN categories c ON c.id = t.categoryId
      WHERE t.userId = ?
+        AND t.deletedAt IS NULL
        AND t.type = 'expense'
        AND substr(t.date, 1, 10) BETWEEN ? AND ?
      GROUP BY c.id, c.name, c.iconColor

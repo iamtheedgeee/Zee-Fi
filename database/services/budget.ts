@@ -43,8 +43,9 @@ export async function getBudgets(
 ): Promise<Budget[]> {
   return db.getAllAsync<Budget>(
     `SELECT * FROM budgets
-     WHERE userId = ?
-     ORDER BY createdAt DESC;`,
+      WHERE userId = ?
+      AND deletedAt IS NULL
+      ORDER BY createdAt DESC;`,
     userId
   );
 }
@@ -133,6 +134,8 @@ export async function updateBudget(
     id
   );
 
+  console.log("new budget",budget)
+
   if (!budget) {
     throw new Error(`Budget with id ${id} not found after update.`);
   }
@@ -145,13 +148,16 @@ export async function updateBudget(
  */
 export async function deleteBudget(
   db: SQLiteDatabase,
-  id: number
+  id: number,
+  userId:number,
 ): Promise<void> {
   await db.runAsync(
-    `DELETE FROM budgets WHERE id = ?;`,
-    id
+    `UPDATE budgets
+     SET deletedAt = CURRENT_TIMESTAMP
+     WHERE id = ?;`,
+      id
   );
-//    await markUnsynced(db, input.userId);
+  await markUnsynced(db, userId);
 
 }
 
@@ -167,6 +173,7 @@ export async function getBudgetsWithSpending(
         `SELECT COALESCE(SUM(amount), 0) AS spent
          FROM transactions
          WHERE userId = ?
+          AND deletedAt IS NULL
            AND categoryId = ?
            AND type = 'expense'
            AND date >= ?
@@ -192,7 +199,8 @@ export async function refreshBudgetPeriods(
   userId: number
 ): Promise<void> {
   const budgets = await db.getAllAsync<Budget>(
-    `SELECT * FROM budgets WHERE userId = ?`,
+    `SELECT * FROM budgets WHERE userId = ? AND deletedAt IS NULL
+`,
     [userId]
   );
 
@@ -222,3 +230,4 @@ export async function refreshBudgetPeriods(
     }
   });
 }
+

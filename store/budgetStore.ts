@@ -15,7 +15,7 @@ interface BudgetState {
   // ── Actions ──────────────────────────────────────────
   setBudgets: (db:SQLiteDatabase,userId:number) => Promise<void>;
   addBudget: (db:SQLiteDatabase,userId:number,budget: Budget) => Promise<void>;
-  updateBudget: (budget: InStateBudget) => void;
+  updateBudget: (db:SQLiteDatabase,userId:number,budget: Budget) => Promise<void>;
   updateBudgetProgress: (budgetId:number, spent:number)=>void;
   removeBudget: (id: number) => void;
   setLoading: (loading: boolean) => void;
@@ -76,12 +76,14 @@ export const useBudgetStore = create<BudgetState>((set) => ({
     }),
   })),
 
-  updateBudget: (budget) =>
+  updateBudget: async (db,userId,budget) =>{
+  const spent= await getCategorySpending(db,userId,budget.categoryId,budget.startDate,budget.endDate)
     set((state) => ({
       budgets: state.budgets.map((b) =>
-        b.id === budget.id ? budget : b
+        b.id === budget.id ? {...budget,spent} : b
       ),
-    })),
+    }))
+  },
 
   removeBudget: (id) =>
     set((state) => ({

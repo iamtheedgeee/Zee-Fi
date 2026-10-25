@@ -38,6 +38,7 @@ export async function getTransactions(
   return db.getAllAsync<Transaction>(
     `SELECT * FROM transactions
      WHERE userId = ?
+      AND deletedAt IS NULL
      ORDER BY date DESC, createdAt DESC
      ${limitClause};`,
     userId
@@ -53,6 +54,7 @@ export async function getTransactionsByDateRange(
   return db.getAllAsync<Transaction>(
     `SELECT * FROM transactions
      WHERE userId = ?
+       AND deletedAt IS NULL
        AND date >= ?
        AND date <= ?
      ORDER BY date DESC, createdAt DESC;`,
@@ -200,7 +202,9 @@ export async function deleteTransaction(
 
   await db.withTransactionAsync(async () => {
     await db.runAsync(
-      `DELETE FROM transactions WHERE id = ?;`,
+      `UPDATE transactions
+        SET deletedAt = CURRENT_TIMESTAMP
+        WHERE id = ?;`,
       transaction.id
     );
 
@@ -239,6 +243,7 @@ export async function getTransactionSummary(
        COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) AS totalExpense
      FROM transactions
      WHERE userId = ?
+      AND deletedAt IS NULL
        AND date >= ?
        AND date <= ?;`,
     userId,

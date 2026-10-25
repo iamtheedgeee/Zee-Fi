@@ -12,7 +12,8 @@ import FilterTabs from '@/components/common/FilterTabs';
 import FloatingActionButton from '@/components/common/FloatingActionButton';
 import ScreenHeader from '@/components/common/ScreenHeader';
 import SearchBar from '@/components/common/SearchBar';
-import TransactionItem from '@/components/transaction/TransactionItem';
+import EditTransactionModal from '@/components/transaction/EditTransactionModal';
+import TransactionItem from '@/components/transaction/TransactionItem2';
 import {
   COLORS,
   FONT_SIZE,
@@ -21,17 +22,18 @@ import {
   SHADOWS,
   SPACING,
 } from '@/constants';
+import { deleteTransaction, Transaction } from '@/database/services/transaction';
 import AddTransactionModal from '@/modals/AddTransactionModal3';
 import DateFilterModal, {
-  DateFilter,
   buildPresetFilter,
+  DateFilter,
 } from '@/modals/DateFilterModal';
-import { useCategoryStore, useTransactionStore } from '@/store';
+import { useCategoryStore, useTransactionStore, useUserStore } from '@/store';
 import {
   formatCurrency,
   groupTransactionsByDate,
 } from '@/utils/formatters';
-
+import { useSQLiteContext } from 'expo-sqlite';
 const FILTER_TABS = ['All', 'Income', 'Expenses'];
 
 export default function HistoryScreen() {
@@ -43,22 +45,18 @@ export default function HistoryScreen() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
+  const db = useSQLiteContext();
+  const { setBalance } = useUserStore();
+  const { removeTransaction, updateTransaction } = useTransactionStore();
 
-  /**
-   * Date filter state.
-   * Starts as "All Time" so no transactions are hidden by default.
-   * Replaced entirely when the user applies a new filter from
-   * the DateFilterModal.
-   */
+  const [editingTransaction, setEditingTransaction] =
+    useState<Transaction | null>(null);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+
   const [dateFilter, setDateFilter] = useState<DateFilter>(
     () => buildPresetFilter('this_month')
   );
 
-  /**
-   * Whether a non-default date filter is active.
-   * Used to visually highlight the filter button and
-   * show the active filter label below the search bar.
-   */
   const isDateFiltered = dateFilter.preset !== 'all';
 
   // ── Filtering ───────────────────────────────────────────
@@ -126,6 +124,27 @@ export default function HistoryScreen() {
   const totalExpense = filteredTransactions
     .filter((t) => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
+
+
+  async function handleDelete(transactionId: number) {
+    const transaction = transactions.find((t) => t.id === transactionId);
+    if (!transaction) return;
+
+    try {
+      const newBalance = await deleteTransaction(db, transaction);
+      removeTransaction(transactionId);
+      setBalance(newBalance);
+    } catch (error) {
+      console.error('Failed to delete transaction:', error);
+    }
+  }
+
+  function handleEdit(transactionId: number) {
+    const transaction = transactions.find((t) => t.id === transactionId);
+    if (!transaction) return;
+    setEditingTransaction(transaction);
+    setEditModalVisible(true);
+  }
 
   // ── Render ───────────────────────────────────────────────
   return (
@@ -283,12 +302,10 @@ export default function HistoryScreen() {
                     ]}
                   >
                     <TransactionItem
+                      key={transaction.id}
                       transaction={transaction}
-                      onPress={() => {}}
-                      showDelete
-                      onDelete={() => {
-                        console.log('TODO: Delete', transaction.id);
-                      }}
+                      onPress={() => handleEdit(transaction.id)}
+                      onDelete={() => handleDelete(transaction.id)}
                     />
                   </View>
                 ))}
@@ -306,7 +323,14 @@ export default function HistoryScreen() {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
       />
-
+      <EditTransactionModal
+          visible={editModalVisible}
+          transaction={editingTransaction}
+          onClose={() => {
+            setEditModalVisible(false);
+            setEditingTransaction(null);
+          }}
+        />
       <DateFilterModal
         visible={dateFilterVisible}
         onClose={() => setDateFilterVisible(false)}

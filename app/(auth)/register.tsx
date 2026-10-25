@@ -1,4 +1,5 @@
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants';
+import { setLoggedIn } from '@/database/services/auth';
 import { createUser } from '@/database/services/user';
 import { useCategoryStore, useUserStore } from '@/store';
 import { Ionicons } from '@expo/vector-icons';
@@ -159,6 +160,7 @@ export default function RegisterScreen() {
         form.currencyId
       );
       await seedDefaultCategories(db, user.id);
+      await setLoggedIn(db,user.id,true)
       setUser(user);
       await setSummary(db)
 

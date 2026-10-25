@@ -135,7 +135,8 @@ export async function importTransactionsFromCsv(
   }>(
     `SELECT id, name, type
      FROM categories
-     WHERE userId = ?;`,
+     WHERE userId = ?
+      AND deletedAt IS NULL;`,
     userId
   );
 

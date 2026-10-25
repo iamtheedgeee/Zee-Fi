@@ -35,6 +35,7 @@ import {
   RADIUS,
   SPACING,
 } from '@/constants';
+import { setLoggedIn } from '@/database/services/auth';
 
 export default function LoginScreen() {
   const db = useSQLiteContext();
@@ -87,7 +88,7 @@ export default function LoginScreen() {
         db,
         data.user.id
       );
-
+      await setLoggedIn(db,user.id,true)
       // 3. Load Zustand stores.
       await Promise.all([
         setTransactions(db, user.id),

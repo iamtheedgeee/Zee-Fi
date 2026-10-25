@@ -47,10 +47,10 @@ export async function getUser(
   );
 }
 
-export async function getFirstUser(
+export async function getUsers(
   db: SQLiteDatabase
 ): Promise<User | null> {
-  return db.getFirstAsync<User>(`SELECT * FROM users LIMIT 1;`);
+  return db.getFirstAsync<User>(`SELECT * FROM users;`);
 }
 
 /*export async function updateUser(

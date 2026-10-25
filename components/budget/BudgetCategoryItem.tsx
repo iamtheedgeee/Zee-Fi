@@ -7,6 +7,7 @@ import { formatCurrency } from '@/utils/formatters';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
+  Alert,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -15,12 +16,14 @@ import {
 
 interface BudgetCategoryItemProps {
   budget: InStateBudget;
-  onPress?: () => void;
+  onEdit: () => void;
+  onDelete: ()=>void;
 }
 
 export default function BudgetCategoryItem({
   budget,
-  onPress,
+  onEdit,
+  onDelete
 }: BudgetCategoryItemProps) {
   const {categories}=useCategoryStore()
   const category=categories.find((c) => c.id === budget.categoryId)
@@ -36,63 +39,154 @@ export default function BudgetCategoryItem({
     Math.round((spent / budget.amount) * 100)
   );
   const remaining = Math.max(0, budget.amount - spent);
-
+  function handleDelete() {
+    Alert.alert(
+      'Delete Budget',
+      `Delete the budget for ${category?.name}? Your transactions in this category will not be affected.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: onDelete },
+      ]
+    );
+  }
   return (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      {/* Top row: icon, name, amounts, chevron */}
-      <View style={styles.topRow}>
-        {/* Category icon */}
-        <View
-          style={[
-            styles.iconCircle,
-            { backgroundColor: iconBackground },
-          ]}
-        >
-          <Ionicons
-            name={iconName as any}
-            size={20}
-            color={iconColor}
-          />
+    <View style={styles.card}>
+        {/* Header: Category and actions */}
+        <View style={styles.header}>
+          <View style={styles.categorySection}>
+            <View
+              style={[
+                styles.iconCircle,
+                { backgroundColor: iconBackground },
+              ]}
+            >
+              <Ionicons
+                name={iconName as any}
+                size={22}
+                color={iconColor}
+              />
+            </View>
+    
+            <View style={styles.nameSection}>
+              <Text
+                style={styles.categoryName}
+                numberOfLines={1}
+              >
+                {category?.name}
+              </Text>
+    
+              <Text style={styles.subtitle}>
+                Budget overview
+              </Text>
+            </View>
+          </View>
+    
+          {/* Actions */}
+          <View style={styles.actions}>
+            <TouchableOpacity
+              onPress={onEdit}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.actionButton}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name="pencil-outline"
+                size={17}
+                color={COLORS.primary}
+              />
+            </TouchableOpacity>
+    
+            <TouchableOpacity
+              onPress={handleDelete}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.actionButton}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name="trash-outline"
+                size={17}
+                color={COLORS.danger}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
-
-        {/* Category name and spent amount */}
-        <View style={styles.nameSection}>
-          <Text style={styles.categoryName}>{category?.name}</Text>
-          <Text style={styles.spentText}>
-            {formatCurrency(spent)} spent
-          </Text>
+    
+        {/* Spending information */}
+        <View style={styles.amountSection}>
+          <View>
+            <Text style={styles.amountLabel}>
+              Spent so far
+            </Text>
+    
+            <Text style={styles.spentAmount}>
+              {formatCurrency(spent)}
+            </Text>
+          </View>
+    
+          <View style={styles.limitSection}>
+            <Text style={styles.amountLabel}>
+              Budget limit
+            </Text>
+    
+            <Text style={styles.limitAmount}>
+              {formatCurrency(budget.amount)}
+            </Text>
+          </View>
         </View>
-
-        {/* Right side: budget limit and chevron */}
-        <View style={styles.rightSection}>
-          <Text style={styles.limitText}>{formatCurrency(budget.amount)}</Text>
-          <Ionicons
-            name="chevron-forward"
-            size={16}
-            color={COLORS.textMuted}
-          />
+    
+        {/* Progress */}
+        <View style={styles.progressSection}>
+          <View style={styles.progressHeader}>
+            <Text style={styles.progressLabel}>
+              Budget usage
+            </Text>
+    
+            <Text style={styles.percentageText}>
+              {Math.round(percentUsed)}%
+            </Text>
+          </View>
+    
+          <View style={styles.progressTrack}>
+            <ProgressBar
+              percent={percentUsed}
+              height={8}
+            />
+          </View>
+        </View>
+    
+        {/* Footer */}
+        <View style={styles.footer}>
+          <View style={styles.remainingSection}>
+            <Ionicons
+              name="wallet-outline"
+              size={16}
+              color={COLORS.primary}
+            />
+    
+            <View>
+              <Text style={styles.footerLabel}>
+                Remaining
+              </Text>
+    
+              <Text style={styles.remainingAmount}>
+                {formatCurrency(remaining)}
+              </Text>
+            </View>
+          </View>
+    
+          <View style={styles.daysSection}>
+            <Ionicons
+              name="calendar-outline"
+              size={16}
+              color={COLORS.textMuted}
+            />
+    
+            <Text style={styles.daysText}>
+              {daysRemaining} days left
+            </Text>
+          </View>
         </View>
       </View>
-
-      {/* Progress bar */}
-      <View style={styles.progressSection}>
-        <ProgressBar percent={percentUsed} height={8} />
-      </View>
-
-      {/* Bottom row: percent used and days remaining */}
-      <View style={styles.bottomRow}>
-        <Text style={styles.remainingText}>
-          {formatCurrency(remaining)} remaining
-        </Text>
-        <Text style={styles.daysText}>
-          {daysRemaining} days left
-        </Text>
-      </View>
-    </TouchableOpacity>
   );
 }
 
@@ -102,32 +196,40 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     padding: SPACING.lg,
     marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     ...SHADOWS.sm,
   },
 
-  topRow: {
+  // ── Header ────────────────────────────────────────────
+
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.lg,
+  },
+
+  categorySection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
     gap: SPACING.md,
-    marginBottom: SPACING.md,
+    marginRight: SPACING.sm,
   },
 
   iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
 
-  /**
-   * flex: 1 so the name section fills the space between
-   * the icon and the right-side limit/chevron.
-   */
   nameSection: {
     flex: 1,
-    gap: 2,
+    gap: 4,
   },
 
   categoryName: {
@@ -136,44 +238,123 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
   },
 
-  spentText: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: FONT_WEIGHT.regular,
-    color: COLORS.textSecondary,
+  subtitle: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textMuted,
   },
 
-  rightSection: {
+  actions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.xs,
-    flexShrink: 0,
   },
 
-  limitText: {
-    fontSize: FONT_SIZE.sm,
+  actionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: COLORS.inputBackground,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // ── Amounts ──────────────────────────────────────────
+
+  amountSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginBottom: SPACING.lg,
+  },
+
+  amountLabel: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    marginBottom: 5,
+  },
+
+  spentAmount: {
+    fontSize: FONT_SIZE.xl,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.textPrimary,
+  },
+
+  limitSection: {
+    alignItems: 'flex-end',
+  },
+
+  limitAmount: {
+    fontSize: FONT_SIZE.md,
     fontWeight: FONT_WEIGHT.semiBold,
     color: COLORS.textSecondary,
   },
 
+  // ── Progress ─────────────────────────────────────────
+
   progressSection: {
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.lg,
   },
 
-  bottomRow: {
+  progressHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: SPACING.sm,
   },
 
-  remainingText: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: FONT_WEIGHT.regular,
+  progressLabel: {
+    fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
+  },
+
+  percentageText: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.semiBold,
+    color: COLORS.textPrimary,
+  },
+
+  progressTrack: {
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+
+  // ── Footer ───────────────────────────────────────────
+
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+
+  remainingSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+
+  footerLabel: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textMuted,
+    marginBottom: 3,
+  },
+
+  remainingAmount: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.semiBold,
+    color: COLORS.textPrimary,
+  },
+
+  daysSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
   },
 
   daysText: {
     fontSize: FONT_SIZE.xs,
-    fontWeight: FONT_WEIGHT.regular,
-    color: COLORS.textMuted,
+    color: COLORS.textSecondary,
   },
 });

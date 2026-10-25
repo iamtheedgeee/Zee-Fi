@@ -1,12 +1,6 @@
-/**
- * Category Service
- *
- * All SQLite operations for the categories table.
- */
 
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { markUnsynced } from './user';
-
 export type Category = {
   id: number;
   userId: number;
@@ -19,7 +13,6 @@ export type Category = {
   updatedAt: string;
   deletedAt: string |null;
 };
-
 export type CreateCategoryInput = {
   userId: number;
   name: string;
@@ -27,7 +20,6 @@ export type CreateCategoryInput = {
   iconName:string;
   iconColor:string;
 };
-
 /**
  * Fetches all categories for a user.
  * Optionally filter by type ('income' or 'expense').
@@ -40,7 +32,9 @@ export async function getCategories(
   if (type) {
     return db.getAllAsync<Category>(
       `SELECT * FROM categories
-       WHERE userId = ? AND type = ?
+       WHERE userId = ?
+         AND type = ?
+         AND deletedAt IS NULL
        ORDER BY name ASC;`,
       userId,
       type
@@ -129,12 +123,15 @@ export async function updateCategory(
  */
 export async function deleteCategory(
   db: SQLiteDatabase,
-  id: number
+  id: number,
+  userId:number,
 ): Promise<void> {
-  const cat=await db.runAsync(
-    `DELETE FROM categories WHERE id = ?;`,
-    id
+  await db.runAsync(
+    `UPDATE categories
+     SET deletedAt = CURRENT_TIMESTAMP
+     WHERE id = ?;`,
+      id
   );
-    //await markUnsynced(db, cat.userId);
+    await markUnsynced(db, userId);
 
 }

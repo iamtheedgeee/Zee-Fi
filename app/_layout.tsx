@@ -20,10 +20,8 @@ export default function RootLayout() {
         //resetDatabase();
       }catch(error){
         console.log(error)
-      }
-      
+      }     
     }, []);
-  
     if (!databaseReady) {
       console.log("database ready")
       return null;
