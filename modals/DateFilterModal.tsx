@@ -44,22 +44,14 @@ export type DatePreset =
 
 export interface DateFilter {
   preset: DatePreset;
-  /**
-   * ISO date strings (YYYY-MM-DD).
-   * startDate and endDate are only meaningful when
-   * preset is 'custom', but are always present for
-   * convenience so the caller never has to null-check.
-   */
   startDate: string;
   endDate: string;
-  /** Human-readable label shown on the filter button */
   label: string;
 }
 
 interface DateFilterModalProps {
   visible: boolean;
   onClose: () => void;
-  /** Called when the user taps Apply */
   onApply: (filter: DateFilter) => void;
   /** The currently active filter so the modal opens pre-selected */
   currentFilter: DateFilter;

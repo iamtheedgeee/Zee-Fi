@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-
 import FilterTabs from '@/components/common/FilterTabs';
 import FloatingActionButton from '@/components/common/FloatingActionButton';
 import ScreenHeader from '@/components/common/ScreenHeader';
