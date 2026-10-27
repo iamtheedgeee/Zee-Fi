@@ -176,10 +176,10 @@ function formatAmountInput(value: string): string {
     try {
       const budget=transactionType==="expense" && await getBudgetByCategory(db,user!.id,selectedCategoryId!);
       const amount=parseFloat(amountText.replace(/,/g, ''))
-      if(amount>user.balance && transactionType==="expense"){
-        Alert.alert("Insufficient Balance.Bad records ruin insights")
-        return
-      }
+      // if(amount>user.balance && transactionType==="expense"){
+      //   Alert.alert("Insufficient Balance.Bad records ruin insights")
+      //   return
+      // }
       
       let spent=0
       if(budget){

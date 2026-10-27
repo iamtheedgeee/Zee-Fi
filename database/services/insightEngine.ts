@@ -640,7 +640,7 @@ function analyseUnusualSpending(data: EngineInput): InsightResult[] {
 }
 
 /**
- * ANALYSER 7: Average spending per day
+ * ANALYSER 7: Average spending per day increased or decreased
  *
  * "You spent an average of ₦4,200 per day this month."
  * "Your daily spend average is up 18% from last month."

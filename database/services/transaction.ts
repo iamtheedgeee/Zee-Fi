@@ -63,24 +63,14 @@ export async function getTransactionsByDateRange(
     endDate
   );
 }
-
+//database/transaction.ts
 export async function createTransaction(
   db: SQLiteDatabase,
   input: CreateTransactionInput
 ): Promise<{ transaction: Transaction; newBalance: number }> {
-  /**
-   * The balance delta is positive for income and negative
-   * for expenses. This mirrors how real bank accounts work.
-   */
   const balanceDelta =
     input.type === 'income' ? input.amount : -input.amount;
 
-  /**
-   * execAsync runs multiple statements atomically.
-   * If either the INSERT or the UPDATE fails, both are
-   * rolled back — we never end up with a transaction
-   * recorded but the balance not updated, or vice versa.
-   */
   let transaction:Transaction|null=null
   await db.withTransactionAsync(async () => {
     const result=await db.runAsync(

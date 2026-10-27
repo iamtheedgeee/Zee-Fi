@@ -4,37 +4,17 @@ import ScreenHeader from '@/components/common/ScreenHeader';
 import SectionHeader from '@/components/common/SectionHeader';
 import StatCard from '@/components/common/StatCard';
 import TransactionItem from '@/components/transaction/TransactionItem';
-import AddTransactionModal from '@/modals/AddTransactionModal3';
-import { router } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View
-} from 'react-native';
-import { PieChart } from "react-native-gifted-charts";
-
-
-import {
-  CATEGORY_COLOR_OPTIONS,
-  COLORS,
-  FONT_SIZE,
-  FONT_WEIGHT,
-  RADIUS,
-  SHADOWS,
-  SPACING,
-} from '@/constants';
+import { CATEGORY_COLOR_OPTIONS, COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING, } from '@/constants';
 import { buildSpendingBreakdown, CategorySpending, getCategoriesSpending } from '@/database/services/analyses';
+import AddTransactionModal from '@/modals/AddTransactionModal3';
 import { useBudgetStore, useTransactionStore, useUserStore } from '@/store';
 import { getDashboardRange } from '@/utils/date';
 import { formatCurrency, toTitleCase } from '@/utils/formatters';
+import { router } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-
-
-
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { PieChart } from "react-native-gifted-charts";
 export default function DashboardScreen() {
   const db=useSQLiteContext()
   const [modalVisible, setModalVisible] = useState(false);
@@ -51,16 +31,12 @@ export default function DashboardScreen() {
     (sum, b) => sum + ((b as any).spent ?? 0),
     0
   );
-  const overallPercent =
-    totalBudget > 0
-        ? Math.min(100, Math.round((totalSpent / totalBudget) * 100))
-        : 0;
-
+  const overallPercent =(totalBudget > 0) ? Math.min(100, Math.round((totalSpent / totalBudget) * 100)): 0;
   const cyclePeriod = () => {
       if(summaryLoading) return
       setPeriod();
     };
-    const spendingBreakdown = useMemo(() => {
+  const spendingBreakdown = useMemo(() => {
     const getColor = (iconColor: string) =>
       CATEGORY_COLOR_OPTIONS.find(
         (option) => option.label === iconColor
@@ -70,19 +46,16 @@ export default function DashboardScreen() {
       categorySpending,
       getColor,
       COLORS.textMuted
-    );
-  }, [categorySpending])
+  );
+}, [categorySpending])
   useEffect(()=>{
     //cleanup variable
     let cancelled = false;
-    console.log("h")
-    console.log(transactions)
     async function refreshSummary(){
       if (summaryLoading) return
       await setSummary(db)
     }
     if (!user) return;
-
 
     async function loadSpending() {
       const { startDate, endDate } = getDashboardRange(period);
@@ -106,22 +79,12 @@ export default function DashboardScreen() {
     refreshSummary()
   },[db,period,user?.id,transactions])
   return (
-    /**
-     * The outer View is position: 'relative' so the
-     * FloatingActionButton can be absolutely positioned
-     * relative to this container rather than the screen.
-     */
     <View style={styles.screen}>
       {/* ── Header ────────────────────────────────── */}
       <ScreenHeader
         title="ZeeFi AI"
         subtitle={`Hello, ${firstName} 👋`}
-        onNotificationPress={() => {
-          // TODO: Navigate to notifications screen
-        }}
       />
-
-      {/* ── Scrollable Content ───────────────────── */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -135,14 +98,7 @@ export default function DashboardScreen() {
           </Text>
 
         </Pressable>
-
         {/* ── Stats Grid ───────────────────────────── */}
-        {/*
-         * A 2x2 grid of stat cards. We use flexWrap with
-         * flexDirection: 'row' so they naturally wrap into
-         * two columns. Each StatCard has flex: 1 so they
-         * share space equally within each row.
-         */}
         <View style={styles.statsGrid}>
           <StatCard
             label={`${toTitleCase(period)} Income`}
@@ -161,10 +117,7 @@ export default function DashboardScreen() {
             trendPositive={false}
           />
         </View>
-
-        {/* ── Budget Progress Card ─────────────────── *
-            SUMS UP ALL THE BUDGETS AND GETS THE COMBINED PROGRESS CLICK TO GO TO BUDGET PAGE
-        */}
+        {/* ── Budget Progress Card ─────────────────── */}
         <View style={styles.card}>
           <View style={styles.budgetCardHeader}>
             <View>
@@ -180,23 +133,17 @@ export default function DashboardScreen() {
               {overallPercent}%
             </Text>
           </View>
-
           <ProgressBar
             percent={overallPercent}
             height={10}
           />
-
           <Text style={styles.budgetStatusText}>
           </Text>
         </View>
-
         {/* ── Spending Breakdown ───────────────────── */}
         <View style={styles.card}>
           <SectionHeader title={`${toTitleCase(period)} Spending Breakdown`} />
-
           <View style={styles.spendingBreakdown}>
-
-
             {/* Legend */}
             {(!summaryLoading)?(spendingBreakdown.length > 0 ? (
               <>
@@ -214,7 +161,6 @@ export default function DashboardScreen() {
                     showText={false}
                   />
                 </View>
-
                 <View style={styles.spendingLegend}>
                   {spendingBreakdown.map((item) => (
                     <View key={item.label} style={styles.legendRow}>
@@ -224,7 +170,6 @@ export default function DashboardScreen() {
                           { backgroundColor: item.color },
                         ]}
                       />
-
                       <Text style={styles.legendLabel}>
                         {item.label.split(' ')[0]}
                       </Text>
@@ -250,8 +195,6 @@ export default function DashboardScreen() {
           </View>}
           </View>
         </View>
-
-        
         {/* ── Recent Transactions ──────────────────── */}
         <View style={styles.card}>
           <SectionHeader
@@ -259,12 +202,6 @@ export default function DashboardScreen() {
             actionLabel="View All"
             onActionPress={() => router.push('/history')}
           />
-
-          {/*
-           * Divider lines between transactions are created
-           * by adding a bottom border to each item except
-           * the last one. We use index to detect the last item.
-           */}
           {recentTransactions.map((transaction, index) => (
             <View
               key={transaction.id}
@@ -284,10 +221,8 @@ export default function DashboardScreen() {
         </View>
         <View style={styles.bottomPadding} />
       </ScrollView>
-
       {/* ── Floating Action Button ─────────────────*/}
       <FloatingActionButton onPress={() => setModalVisible(true)} />
-
       {/* ── Add Transaction Modal ────────────────── */}
       <AddTransactionModal
         visible={modalVisible}

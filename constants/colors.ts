@@ -26,6 +26,17 @@ export const CATEGORY_ICON_OPTIONS: { name: string; label: string }[] = [
   { name: 'cafe-outline',          label: 'Coffee' },
   { name: 'musical-notes-outline', label: 'Music' },
   { name: 'star-outline',          label: 'Other' },
+  {name: "school-outline",        label:"School"},
+  {name: "heart-outline",         label:"Heart"},
+  {name: "fast-food-outline",     label:"Fast-Food"},
+  {name: "phone-portrait-outline",label:"Phone"},
+  {name: "bus-outline",           label:"Bus"},
+  {name: "book-outline",          label:"Book"},
+  {name: "basket-outline",        label:"Basket"},
+  {name: "beer-outline",          label:"Beer"},
+  {name: "wallet-outline",      label:"Wallet"},
+  {name: "people-outline",      label:"People"},
+  {name: "person-outline",      label:"Person"},
 ];
 export const COLORS = {
 

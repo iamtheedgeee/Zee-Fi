@@ -58,7 +58,7 @@ const SEVERITY_CONFIG: Record<
   },
   danger:{
     color:COLORS.danger,
-    icon: 'dangerous',
+    icon: 'warning-sharp',
     background:'#FEF3C7'
   },
   info: {

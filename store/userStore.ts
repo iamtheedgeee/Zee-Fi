@@ -77,9 +77,10 @@ export const useUserStore = create<UserState>((set,get) => ({
     }
     
   },
-  setPeriod:()=>set((state)=>({
+  setPeriod:()=>{
+    set((state)=>({
     period:state.period==='monthly'?'weekly':state.period==="weekly"?'yearly':'monthly'
-  })),
+  }))},
   clearUser: async(db:SQLiteDatabase) =>{
     await deleteUser(db,get().user?.id!) 
     set({ user: null , summary: null})

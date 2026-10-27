@@ -22,7 +22,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { BarChart, LineChart, PieChart } from 'react-native-gifted-charts';
+import { BarChart, PieChart } from 'react-native-gifted-charts';
 
 import ScreenHeader from '@/components/common/ScreenHeader';
 import {
@@ -36,9 +36,14 @@ import {
 import { formatCurrency } from '@/utils/formatters';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
+
 /**
- * The usable chart width accounts for the screen padding
- * on both sides plus the card's internal padding.
+ * Approximate drawable chart width based on the current screen width.
+ *
+ * This assumes the screen has SPACING.lg horizontal outer padding and each
+ * chart card has SPACING.xl internal padding. If the chart is still clipped
+ * on a particular device, measure the chart wrapper with onLayout and pass
+ * that measured width to gifted-charts instead of relying on this estimate.
  */
 const CHART_WIDTH = SCREEN_WIDTH - SPACING.lg * 2 - SPACING.xl * 2 - 2;
 
@@ -53,8 +58,27 @@ const PERIOD_TABS: { id: InsightPeriodType; label: string }[] = [
 ];
 
 // ─────────────────────────────────────────────────────────
-// Date range helpers (same as in useInsights.ts)
 // ─────────────────────────────────────────────────────────
+
+/**
+ * Converts a Date into the YYYY-MM-DD format using LOCAL calendar fields.
+ *
+ * Important:
+ * Avoid date.toISOString().split('T')[0] for calendar dates.
+ * toISOString() converts the date to UTC first. In time zones such as
+ * Nigeria (UTC+1), local midnight can become the previous UTC date, which
+ * can put transactions into the wrong chart bucket or period.
+ *
+ * This helper is for dates representing a local calendar day, not timestamps
+ * that are intentionally meant to be displayed in UTC.
+ */
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
 
 function getCurrentPeriodBounds(
   periodType: InsightPeriodType
@@ -70,16 +94,16 @@ function getCurrentPeriodBounds(
       const sunday = new Date(monday);
       sunday.setDate(monday.getDate() + 6);
       return {
-        start: monday.toISOString().split('T')[0],
-        end: sunday.toISOString().split('T')[0],
+        start: formatLocalDate(monday),
+        end: formatLocalDate(sunday),
       };
     }
     case 'monthly': {
       const year = now.getFullYear();
       const month = now.getMonth();
       return {
-        start: new Date(year, month, 1).toISOString().split('T')[0],
-        end: new Date(year, month + 1, 0).toISOString().split('T')[0],
+        start: formatLocalDate(new Date(year, month, 1)),
+        end: formatLocalDate(new Date(year, month + 1, 0)),
       };
     }
     case 'yearly':
@@ -172,9 +196,12 @@ function buildIncomeExpenseBars(
   if (periodType === 'weekly') {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     days.forEach((label, i) => {
+      // Start from the supplied Monday and move forward one local calendar day.
+      // formatLocalDate keeps the key aligned with the YYYY-MM-DD date stored
+      // on each transaction, without a UTC conversion shifting it backward.
       const d = new Date(start + 'T00:00:00');
       d.setDate(d.getDate() + i);
-      const key = d.toISOString().split('T')[0];
+      const key = formatLocalDate(d);
       const dayTx = transactions.filter(
         (t) => t.date.split('T')[0] === key
       );
@@ -286,7 +313,10 @@ function buildDailySpendLine(
     d <= endDate;
     d.setDate(d.getDate() + 1)
   ) {
-    const key = d.toISOString().split('T')[0];
+    // The loop advances through local calendar dates. Use the same local
+    // YYYY-MM-DD key format as transaction.date so each amount lands on
+    // the correct point in the line chart.
+    const key = formatLocalDate(d);
     const dayNum = d.getDate();
 
     /**
@@ -769,78 +799,8 @@ export default function InsightsScreen() {
           )}
         </View>}
 
-        {/* ════════════════════════════════════════
-            CHART 2 — Daily Spending Area Chart
-            ════════════════════════════════════════ */}
-        <View style={styles.chartCard}>
-          <SectionHeader
-            title="Spending Trend"
-            actionLabel={
-              totalSpent > 0
-                ? `Avg ${formatCurrency(
-                    totalSpent /
-                      Math.max(
-                        1,
-                        dailySpendPoints.filter((p) => p.value > 0).length
-                      )
-                  )}/day`
-                : undefined
-            }
-          />
-
-          {!hasData || dailySpendPoints.every((p) => p.value === 0) ? (
-            <ChartEmptyState message="No expense data this period." />
-          ) : (
-            <View style={styles.chartWrapper}>
-              <LineChart
-                data={dailySpendPoints}
-                width={CHART_WIDTH}
-                height={160}
-                /**
-                 * areaChart fills the area under the line with
-                 * a gradient from the line colour to transparent.
-                 * Much easier to read than a bare line.
-                 */
-                areaChart
-                color={COLORS.primary}
-                startFillColor={COLORS.primary}
-                endFillColor="transparent"
-                startOpacity={0.3}
-                endOpacity={0.02}
-                thickness={2}
-                noOfSections={4}
-                maxValue={lineMaxValue}
-                yAxisTextStyle={styles.axisText}
-                xAxisLabelTextStyle={styles.axisText}
-                hideRules={false}
-                rulesColor={COLORS.border}
-                rulesType="solid"
-                yAxisColor="transparent"
-                xAxisColor={COLORS.border}
-                formatYLabel={(val) => {
-                  const n = parseFloat(val);
-                  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-                  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
-                  return String(n);
-                }}
-                /**
-                 * hideDataPoints keeps the line clean when there
-                 * are many points (e.g. 30 days in a monthly view).
-                 * For weekly (7 points) we show them.
-                 */
-                hideDataPoints={activePeriod !== 'weekly'}
-                dataPointsColor={COLORS.primary}
-                dataPointsRadius={4}
-                isAnimated
-                animationDuration={600}
-                curved
-              />
-            </View>
-          )}
-        </View>
-
-        {/* ════════════════════════════════════════
-            CHART 3 — Spending by Category Donut
+             {/* ════════════════════════════════════════
+            CHART 2 — Spending by Category Donut
             ════════════════════════════════════════ */}
         <View style={styles.chartCard}>
           <SectionHeader title="Spending by Category" />
@@ -982,7 +942,7 @@ export default function InsightsScreen() {
           </View>
         )}
 
-        {/* ── Monthly summary card ─────────────── */}
+        {/* ── Summary card ─────────────── */}
         {hasData && (
           <View style={styles.summaryCard}>
             <Text style={styles.summaryTitle}>

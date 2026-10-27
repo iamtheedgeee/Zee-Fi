@@ -39,7 +39,7 @@ interface ScreenHeaderProps {
 export default function ScreenHeader({
   title,
   subtitle,
-  showNotification = true,
+  showNotification = false,
   showAvatar = true,
   onNotificationPress,
   onAvatarPress=(()=>router.push('/profile')),

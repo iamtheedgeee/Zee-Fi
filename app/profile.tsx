@@ -10,7 +10,6 @@ import {
   ActivityIndicator, Alert, Modal,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   View
 } from 'react-native';
@@ -268,7 +267,7 @@ export default function ProfileScreen() {
         <View style={styles.menuCard}>
           <ProfileSectionHeader title="Account Management" />
 
-          <ProfileMenuItem
+          {/*<ProfileMenuItem
             iconName="person-outline"
             iconBackground={COLORS.primaryMuted}
             iconColor={COLORS.primary}
@@ -276,7 +275,7 @@ export default function ProfileScreen() {
             onPress={() => {
 
             }}
-          />      
+          /> */}     
           <ProfileMenuItem
             iconName="document-attach-outline"
             iconBackground={COLORS.primaryMuted}
@@ -311,7 +310,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* ── App Preferences Section ──────────────── */}
-        <View style={styles.menuCard}>
+        {/* <View style={styles.menuCard}>
           <ProfileSectionHeader title="App Preferences" />
 
           <ProfileMenuItem
@@ -336,9 +335,6 @@ export default function ProfileScreen() {
             label="Enforce Budgets"
             onPress={() => {}}
             rightElement={
-              /*
-               * Handles whether or not the budgets will be enforced when logging an expense
-               */
               <Switch
                 value={notificationsEnabled}
                 onValueChange={setNotificationsEnabled}
@@ -362,13 +358,13 @@ export default function ProfileScreen() {
               //
             }}
           />
-        </View>
+        </View> */}
 
         {/* ── Support & Legal Section ──────────────── */}
         <View style={styles.menuCard}>
           <ProfileSectionHeader title="Support & Help" />
 
-          <ProfileMenuItem
+          {/* <ProfileMenuItem
             iconName="help-circle-outline"
             iconBackground={COLORS.primaryMuted}
             iconColor={COLORS.primary}
@@ -386,7 +382,7 @@ export default function ProfileScreen() {
             onPress={() => {
               //show about screen
             }}
-          />
+          /> */}
 
           <ProfileMenuItem
             iconName="log-out-outline"
