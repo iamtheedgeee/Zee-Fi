@@ -1,15 +1,17 @@
 
 import type { SQLiteDatabase } from 'expo-sqlite';
-export type User = {
+export interface User {
   id: number;
   name: string;
   email: string | null;
   currency: string;
   balance: number;
+  initialBalance: number;
+  loggedIn: number;
+  supabaseUserId: string | null;
   createdAt: string;
   updatedAt: string;
-};
-
+}
 export async function createUser(
   db: SQLiteDatabase,
   name: string,
@@ -19,10 +21,11 @@ export async function createUser(
 ): Promise<User> {
   console.log(name,email,currency)
   const result = await db.runAsync(
-    `INSERT INTO users (name, email, currency, balance) VALUES (?, ?, ?, ?)`,
+    `INSERT INTO users (name, email, currency, balance, initialBalance) VALUES (?, ?, ?, ?, ?)`,
     name,
     email,
     currency,
+    balance,
     balance,
   );
   const user = await db.getFirstAsync<User>(
@@ -44,10 +47,10 @@ export async function getUser(
   );
 }
 
-export async function getFirstUser(
+export async function getUsers(
   db: SQLiteDatabase
 ): Promise<User | null> {
-  return db.getFirstAsync<User>(`SELECT * FROM users LIMIT 1;`);
+  return db.getFirstAsync<User>(`SELECT * FROM users;`);
 }
 
 /*export async function updateUser(
@@ -67,25 +70,8 @@ export async function getFirstUser(
     id
   );
   
-
-const user = await db.getFirstAsync<User>(
-    `SELECT * FROM users WHERE id = ?;`,
-    id
-  );
-  if (!user) throw new Error(`User with id ${id} not found after update.`);
-  return user;
-}
 */
 
-/**
- * Adjusts the user's balance by a signed delta.
- * Pass a positive number to add (income).
- * Pass a negative number to subtract (expense).
- *
- * Using a delta rather than setting an absolute value
- * prevents race conditions and makes reversal easy:
- * to undo an income of 500, pass delta = -500.
- */
 export async function adjustUserBalance(
   db: SQLiteDatabase,
   userId: number,
@@ -113,4 +99,16 @@ export async function deleteUser(
   id: number
 ): Promise<void> {
   await db.runAsync(`DELETE FROM users WHERE id = ?;`, id);
+}
+
+export async function markUnsynced(
+  db: SQLiteDatabase,
+  userId: number
+) {
+  await db.runAsync(
+    `UPDATE users
+     SET hasUnsyncedChanges = 1
+     WHERE id = ?;`,
+    userId
+  );
 }

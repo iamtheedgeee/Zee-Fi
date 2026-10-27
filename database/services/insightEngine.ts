@@ -40,7 +40,7 @@
  * That is all. The engine picks it up automatically.
  */
 
-import { Budget } from './budget';
+import { InStateBudget } from '@/store/budgetStore';
 import { Category } from './category';
 import { Transaction } from './transaction';
 
@@ -119,7 +119,7 @@ export interface EngineInput {
   /** All categories for the user */
   categories: Category[];
   /** All budgets for the user */
-  budgets: Budget[];
+  budgets: InStateBudget[];
   /** Which time window we are analysing */
   periodType: InsightPeriodType;
   /** ISO date string — first day of the current period */
@@ -640,7 +640,7 @@ function analyseUnusualSpending(data: EngineInput): InsightResult[] {
 }
 
 /**
- * ANALYSER 7: Average spending per day
+ * ANALYSER 7: Average spending per day increased or decreased
  *
  * "You spent an average of ₦4,200 per day this month."
  * "Your daily spend average is up 18% from last month."
@@ -1046,23 +1046,14 @@ function analyseBudgetAdherence(data: EngineInput): InsightResult[] {
   const period = periodLabel(data.periodType);
 
   // Build spend per category for the current period
-  const spendMap = new Map<number, number>();
-  for (const t of data.currentTransactions) {
-    if (t.type !== 'expense') continue;
-    spendMap.set(
-      t.categoryId,
-      (spendMap.get(t.categoryId) ?? 0) + t.amount
-    );
-  }
-
+ 
   let withinCount = 0;
   let exceededCount = 0;
-
+  
   for (const budget of data.budgets) {
-    const spent = spendMap.get(budget.categoryId) ?? 0;
     const cat = data.categories.find((c) => c.id === budget.categoryId);
     const catName = cat?.name ?? 'Unknown';
-
+    const spent=budget.spent
     if (spent > budget.amount) {
       exceededCount++;
       const overage = spent - budget.amount;

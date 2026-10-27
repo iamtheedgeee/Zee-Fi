@@ -1,22 +1,18 @@
-/**
- * Category Service
- *
- * All SQLite operations for the categories table.
- */
 
 import type { SQLiteDatabase } from 'expo-sqlite';
-
+import { markUnsynced } from './user';
 export type Category = {
   id: number;
   userId: number;
+  syncId: string | null;
   name: string;
   iconName:string;
   iconColor:string;
   type: 'income' | 'expense';
   createdAt: string;
   updatedAt: string;
+  deletedAt: string |null;
 };
-
 export type CreateCategoryInput = {
   userId: number;
   name: string;
@@ -24,7 +20,6 @@ export type CreateCategoryInput = {
   iconName:string;
   iconColor:string;
 };
-
 /**
  * Fetches all categories for a user.
  * Optionally filter by type ('income' or 'expense').
@@ -37,7 +32,9 @@ export async function getCategories(
   if (type) {
     return db.getAllAsync<Category>(
       `SELECT * FROM categories
-       WHERE userId = ? AND type = ?
+       WHERE userId = ?
+         AND type = ?
+         AND deletedAt IS NULL
        ORDER BY name ASC;`,
       userId,
       type
@@ -77,7 +74,7 @@ export async function createCategory(
   if (!category) {
     throw new Error('Failed to retrieve the newly created category.');
   }
-
+  await markUnsynced(db, input.userId);
   return category;
 }
 
@@ -112,7 +109,7 @@ export async function updateCategory(
   if (!category) {
     throw new Error(`Category with id ${id} not found after update.`);
   }
-
+    await markUnsynced(db, category.userId);
   return category;
 }
   
@@ -126,10 +123,15 @@ export async function updateCategory(
  */
 export async function deleteCategory(
   db: SQLiteDatabase,
-  id: number
+  id: number,
+  userId:number,
 ): Promise<void> {
   await db.runAsync(
-    `DELETE FROM categories WHERE id = ?;`,
-    id
+    `UPDATE categories
+     SET deletedAt = CURRENT_TIMESTAMP
+     WHERE id = ?;`,
+      id
   );
+    await markUnsynced(db, userId);
+
 }

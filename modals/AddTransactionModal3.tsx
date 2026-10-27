@@ -176,10 +176,10 @@ function formatAmountInput(value: string): string {
     try {
       const budget=transactionType==="expense" && await getBudgetByCategory(db,user!.id,selectedCategoryId!);
       const amount=parseFloat(amountText.replace(/,/g, ''))
-      if(amount>user.balance && transactionType==="expense"){
-        Alert.alert("Insufficient Balance.Bad records ruin insights")
-        return
-      }
+      // if(amount>user.balance && transactionType==="expense"){
+      //   Alert.alert("Insufficient Balance.Bad records ruin insights")
+      //   return
+      // }
       
       let spent=0
       if(budget){
@@ -203,6 +203,7 @@ function formatAmountInput(value: string): string {
         date:`${date}T${new Date().toTimeString().slice(0, 8)}`,
         notes: note.trim() || undefined,
       });
+      console.log("new transaction",transaction.id)
       addTransaction(transaction);
       setBalance(newBalance);
       refreshBudgetForCategory(budget,spent+amount)

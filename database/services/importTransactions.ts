@@ -1,5 +1,6 @@
 
 import type { SQLiteDatabase } from 'expo-sqlite';
+import { markUnsynced } from './user';
 
 export type ImportRowError = {
   row: number;
@@ -134,7 +135,8 @@ export async function importTransactionsFromCsv(
   }>(
     `SELECT id, name, type
      FROM categories
-     WHERE userId = ?;`,
+     WHERE userId = ?
+      AND deletedAt IS NULL;`,
     userId
   );
 
@@ -215,7 +217,8 @@ export async function importTransactionsFromCsv(
           userId
         );
       });
-
+        await markUnsynced(db, userId);
+      
       result.imported++;
     } catch (error) {
       result.skipped++;

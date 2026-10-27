@@ -20,10 +20,8 @@ export default function RootLayout() {
         //resetDatabase();
       }catch(error){
         console.log(error)
-      }
-      
+      }     
     }, []);
-  
     if (!databaseReady) {
       console.log("database ready")
       return null;
@@ -100,6 +98,13 @@ export default function RootLayout() {
             name="categories"
             options={{
               title: 'Manage Categories',
+              headerShown: true,
+            }}
+          />
+          <Stack.Screen
+            name="sync-account"
+            options={{
+              title: 'Sync Account',
               headerShown: true,
             }}
           />

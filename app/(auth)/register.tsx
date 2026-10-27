@@ -1,7 +1,7 @@
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOWS, SPACING } from '@/constants';
+import { setLoggedIn } from '@/database/services/auth';
 import { createUser } from '@/database/services/user';
 import { useCategoryStore, useUserStore } from '@/store';
-import { getCurrentMonthRange } from '@/utils/date';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -160,8 +160,8 @@ export default function RegisterScreen() {
         form.currencyId
       );
       await seedDefaultCategories(db, user.id);
+      await setLoggedIn(db,user.id,true)
       setUser(user);
-      const { startDate, endDate } = getCurrentMonthRange();
       await setSummary(db)
 
       router.replace('/(tabs)');

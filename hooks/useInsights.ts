@@ -45,10 +45,10 @@
  */
 
 import {
-    EngineInput,
-    InsightPeriodType,
-    InsightResult,
-    runInsightEngine,
+  EngineInput,
+  InsightPeriodType,
+  InsightResult,
+  runInsightEngine,
 } from '@/database/services/insightEngine';
 import { Transaction } from '@/database/services/transaction';
 import { useBudgetStore } from '@/store/budgetStore';
@@ -309,13 +309,7 @@ export function useInsights(): UseInsightsReturn {
           currencySymbol,
         };
 
-        /**
-         * The engine is synchronous and pure so we do not
-         * need to await it. However wrapping in a setTimeout
-         * with 0ms delay yields to the JS event loop first
-         * so the loading spinner has a chance to render
-         * before the (potentially heavy) computation starts.
-         */
+        //wrapping logic in setimeOut to yield the spinner to the event loop in case of heavy computation
         await new Promise<void>((resolve) => {
           setTimeout(() => {
             try {

@@ -6,8 +6,10 @@
 
 import { getPeriodRange } from '@/utils/date';
 import type { SQLiteDatabase } from 'expo-sqlite';
+import { markUnsynced } from './user';
 export type Budget = {
   id: number;
+  syncId: string | null;
   userId: number;
   categoryId: number;
   amount: number;
@@ -16,6 +18,7 @@ export type Budget = {
   endDate: string;
   createdAt: string;
   updatedAt: string;
+  deletedAt: string |null;
 };
 
 export type CreateBudgetInput = {
@@ -40,8 +43,9 @@ export async function getBudgets(
 ): Promise<Budget[]> {
   return db.getAllAsync<Budget>(
     `SELECT * FROM budgets
-     WHERE userId = ?
-     ORDER BY createdAt DESC;`,
+      WHERE userId = ?
+      AND deletedAt IS NULL
+      ORDER BY createdAt DESC;`,
     userId
   );
 }
@@ -102,14 +106,11 @@ export async function createBudget(
   if (!budget) {
     throw new Error('Failed to retrieve the newly created budget.');
   }
-
+  await markUnsynced(db, input.userId);
   return budget;
 }
 
-/**
- * Updates a budget.
- */
-/*
+
 export async function updateBudget(
   db: SQLiteDatabase,
   id: number,
@@ -119,14 +120,13 @@ export async function updateBudget(
   if (fields.length === 0) throw new Error('No fields to update.');
 
   const setClauses = fields.map((f) => `${f} = ?`).join(', ');
-  const values = fields.map((f) => input[f]);
+  const values = fields.map((f) => input[f] ?? null);
 
   await db.runAsync(
     `UPDATE budgets
      SET ${setClauses}, updatedAt = CURRENT_TIMESTAMP
      WHERE id = ?;`,
-    ...values,
-    id
+    [...values,id]
   );
 
   const budget = await db.getFirstAsync<Budget>(
@@ -134,24 +134,31 @@ export async function updateBudget(
     id
   );
 
+  console.log("new budget",budget)
+
   if (!budget) {
     throw new Error(`Budget with id ${id} not found after update.`);
   }
-
+    await markUnsynced(db, budget.userId);
   return budget;
 }
-*/
+
 /**
  * Deletes a budget.
  */
 export async function deleteBudget(
   db: SQLiteDatabase,
-  id: number
+  id: number,
+  userId:number,
 ): Promise<void> {
   await db.runAsync(
-    `DELETE FROM budgets WHERE id = ?;`,
-    id
+    `UPDATE budgets
+     SET deletedAt = CURRENT_TIMESTAMP
+     WHERE id = ?;`,
+      id
   );
+  await markUnsynced(db, userId);
+
 }
 
 
@@ -166,6 +173,7 @@ export async function getBudgetsWithSpending(
         `SELECT COALESCE(SUM(amount), 0) AS spent
          FROM transactions
          WHERE userId = ?
+          AND deletedAt IS NULL
            AND categoryId = ?
            AND type = 'expense'
            AND date >= ?
@@ -191,7 +199,8 @@ export async function refreshBudgetPeriods(
   userId: number
 ): Promise<void> {
   const budgets = await db.getAllAsync<Budget>(
-    `SELECT * FROM budgets WHERE userId = ?`,
+    `SELECT * FROM budgets WHERE userId = ? AND deletedAt IS NULL
+`,
     [userId]
   );
 
@@ -221,3 +230,4 @@ export async function refreshBudgetPeriods(
     }
   });
 }
+

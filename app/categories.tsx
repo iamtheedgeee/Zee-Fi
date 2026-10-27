@@ -217,7 +217,7 @@ export default function CategoriesScreen() {
           onPress: async () => {
             setDeletingId(category.id);
             try {
-              await deleteCategory(db, category.id);
+              await deleteCategory(db, category.id, user!.id);
               removeCategory(category.id);
               await setBudgets(db,user!.id)
             } catch (error: any) {

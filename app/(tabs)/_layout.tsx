@@ -60,7 +60,6 @@ export default function TabLayout() {
          * component instead.
          */
         headerShown: false,
-
         /**
          * Tab bar appearance matching the PDF design.
          */

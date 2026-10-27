@@ -1,13 +1,16 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
+import { markUnsynced } from './user';
 
 export type Transaction = {
   id: number;
+  syncId: string | null;
   userId: number;
   categoryId: number;
   amount: number;
   type: 'income' | 'expense';
   date: string;
   notes: string | null;
+  deletedAt: string |null;
   createdAt: string;
   updatedAt: string;
 };
@@ -31,9 +34,11 @@ export async function getTransactions(
   limit?: number
 ): Promise<Transaction[]> {
   const limitClause = limit ? `LIMIT ${limit}` : '';
+  
   return db.getAllAsync<Transaction>(
     `SELECT * FROM transactions
      WHERE userId = ?
+      AND deletedAt IS NULL
      ORDER BY date DESC, createdAt DESC
      ${limitClause};`,
     userId
@@ -49,6 +54,7 @@ export async function getTransactionsByDateRange(
   return db.getAllAsync<Transaction>(
     `SELECT * FROM transactions
      WHERE userId = ?
+       AND deletedAt IS NULL
        AND date >= ?
        AND date <= ?
      ORDER BY date DESC, createdAt DESC;`,
@@ -57,26 +63,17 @@ export async function getTransactionsByDateRange(
     endDate
   );
 }
-
+//database/transaction.ts
 export async function createTransaction(
   db: SQLiteDatabase,
   input: CreateTransactionInput
 ): Promise<{ transaction: Transaction; newBalance: number }> {
-  /**
-   * The balance delta is positive for income and negative
-   * for expenses. This mirrors how real bank accounts work.
-   */
   const balanceDelta =
     input.type === 'income' ? input.amount : -input.amount;
 
-  /**
-   * execAsync runs multiple statements atomically.
-   * If either the INSERT or the UPDATE fails, both are
-   * rolled back — we never end up with a transaction
-   * recorded but the balance not updated, or vice versa.
-   */
+  let transaction:Transaction|null=null
   await db.withTransactionAsync(async () => {
-    await db.runAsync(
+    const result=await db.runAsync(
       `INSERT INTO transactions (userId, categoryId, amount, type, date, notes)
        VALUES (?, ?, ?, ?, ?, ?);`,
       input.userId,
@@ -87,6 +84,7 @@ export async function createTransaction(
       input.notes ?? null
     );
 
+    //updating balance
     await db.runAsync(
       `UPDATE users
        SET balance = balance + ?,
@@ -95,16 +93,13 @@ export async function createTransaction(
       balanceDelta,
       input.userId
     );
-  });
 
-  // Fetch the newly created transaction
-  const transaction = await db.getFirstAsync<Transaction>(
-    `SELECT * FROM transactions
-     WHERE userId = ?
-     ORDER BY createdAt DESC
-     LIMIT 1;`,
-    input.userId
-  );
+    // Fetch the newly created transaction
+    transaction=await db.getFirstAsync<Transaction>(
+      `SELECT * FROM transactions WHERE id = ?;`,
+      result.lastInsertRowId
+    )
+});
 
   if (!transaction) {
     throw new Error('Failed to retrieve the newly created transaction.');
@@ -115,18 +110,14 @@ export async function createTransaction(
     `SELECT balance FROM users WHERE id = ?;`,
     input.userId
   );
-
+  await markUnsynced(db, input.userId);
   return {
     transaction,
     newBalance: userRow?.balance ?? 0,
   };
 }
 
-/**
- * Updates a transaction. If the amount or type changed,
- * we reverse the old balance effect and apply the new one.
- */
-/*
+
 export async function updateTransaction(
   db: SQLiteDatabase,
   id: number,
@@ -138,14 +129,13 @@ export async function updateTransaction(
 
   await db.withTransactionAsync(async () => {
     const setClauses = fields.map((f) => `${f} = ?`).join(', ');
-    const values = fields.map((f) => input[f]);
+    const values = fields.map((f) => input[f] ?? null);
 
     await db.runAsync(
       `UPDATE transactions
        SET ${setClauses}, updatedAt = CURRENT_TIMESTAMP
        WHERE id = ?;`,
-      ...values,
-      id
+      [...values,id]
     );
 
     // If amount or type changed, adjust the balance
@@ -170,6 +160,7 @@ export async function updateTransaction(
         oldDelta + newDelta,
         oldTransaction.userId
       );
+      await markUnsynced(db, oldTransaction.userId);
     }
   });
 
@@ -186,7 +177,7 @@ export async function updateTransaction(
 
   return { transaction, newBalance: userRow?.balance ?? 0 };
 }
-*/
+
 /**
  * Deletes a transaction and reverses its balance effect.
  */
@@ -201,7 +192,9 @@ export async function deleteTransaction(
 
   await db.withTransactionAsync(async () => {
     await db.runAsync(
-      `DELETE FROM transactions WHERE id = ?;`,
+      `UPDATE transactions
+        SET deletedAt = CURRENT_TIMESTAMP
+        WHERE id = ?;`,
       transaction.id
     );
 
@@ -213,6 +206,8 @@ export async function deleteTransaction(
       reverseDelta,
       transaction.userId
     );
+    await markUnsynced(db, transaction.userId);
+
   });
 
   const userRow = await db.getFirstAsync<{ balance: number }>(
@@ -238,6 +233,7 @@ export async function getTransactionSummary(
        COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) AS totalExpense
      FROM transactions
      WHERE userId = ?
+      AND deletedAt IS NULL
        AND date >= ?
        AND date <= ?;`,
     userId,

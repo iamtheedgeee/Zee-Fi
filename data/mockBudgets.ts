@@ -1,18 +1,6 @@
 import { COLORS } from '@/constants';
 import { Budget } from '@/types';
 
-/**
- * Mock budget data for the My Budgets screen.
- *
- * Each budget represents a spending limit set by the user
- * for a specific category within the current month.
- *
- * The `spent` value is what has been spent so far.
- * The `limit` is the maximum they want to spend.
- *
- * TODO: Replace with real calculated values from SQLite
- * by summing transactions per category for the current month.
- */
 export const mockBudgets: Budget[] = [
   {
     id: 'bud-001',

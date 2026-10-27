@@ -39,7 +39,7 @@ interface ScreenHeaderProps {
 export default function ScreenHeader({
   title,
   subtitle,
-  showNotification = true,
+  showNotification = false,
   showAvatar = true,
   onNotificationPress,
   onAvatarPress=(()=>router.push('/profile')),
@@ -76,7 +76,7 @@ export default function ScreenHeader({
 
       {/* Right side: notification bell and avatar */}
       <View style={styles.rightSection}>
-        {showNotification && (
+        {/** showNotification && (
           <TouchableOpacity
             style={styles.iconButton}
             onPress={onNotificationPress}
@@ -87,10 +87,10 @@ export default function ScreenHeader({
               size={22}
               color={COLORS.textSecondary}
             />
-            {/* Notification badge dot */}
+            {/* Notification badge dot }
             <View style={styles.notificationBadge} />
           </TouchableOpacity>
-        )}
+        )**/}
 
         {showAvatar && (
           <TouchableOpacity
